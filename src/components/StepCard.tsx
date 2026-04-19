@@ -67,14 +67,16 @@ function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): I
   return defaults;
 }
 
-const SETUP_SECTIONS = ['capabilities', 'relations', 'economy', 'posture'] as const;
+const SETUP_SECTIONS = ['relations', 'economy', 'posture'] as const;
 type SetupSection = typeof SETUP_SECTIONS[number];
 const SETUP_SECTION_LABELS: Record<SetupSection, string> = {
-  capabilities: 'Capability Tracks',
   relations: 'US Relations',
   economy: 'Economy (SoE)',
   posture: 'Posture',
 };
+
+// All capability row+peer combos that must be explicitly clicked in SETUP
+const ALL_CAP_ENTRIES = CAPABILITY_KEYS.flatMap((k) => [`faction_${k}`, `us_${k}`]);
 
 type Phase = 'input' | 'outcome';
 
@@ -87,15 +89,23 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
   const [resolvedRepeatLabel, setResolvedRepeatLabel] = useState('');
   // For SETUP: track which sections have been explicitly touched
   const [touchedSections, setTouchedSections] = useState<Set<SetupSection>>(
-    // Pre-mark sections as touched if sharedState has prior values (resuming SETUP)
     () => {
       if (step.section !== 'SETUP') return new Set<SetupSection>();
       const pre = new Set<SetupSection>();
-      if (sharedState['capabilityTracks']) pre.add('capabilities');
       if (sharedState['usRelation']) pre.add('relations');
       if (sharedState['soe'] !== undefined) pre.add('economy');
       if (sharedState['posture'] !== undefined) pre.add('posture');
       return pre;
+    }
+  );
+
+  // Per-row capability touch tracking (faction_<key> and us_<key> must all be clicked)
+  const [touchedCapRows, setTouchedCapRows] = useState<Set<string>>(
+    () => {
+      if (step.section !== 'SETUP') return new Set<string>();
+      // Pre-fill only if returning to SETUP with existing tracks (second turn)
+      if (!sharedState['capabilityTracks']) return new Set<string>();
+      return new Set(ALL_CAP_ENTRIES);
     }
   );
 
@@ -106,8 +116,25 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     });
   }
 
-  const isSetupReady = step.section !== 'SETUP' || SETUP_SECTIONS.every((s) => touchedSections.has(s));
-  const missingSections = SETUP_SECTIONS.filter((s) => !touchedSections.has(s));
+  function touchCapRow(key: string, peer: 'faction' | 'us') {
+    const entry = `${peer}_${key}`;
+    setTouchedCapRows((prev) => {
+      if (prev.has(entry)) return prev;
+      return new Set([...prev, entry]);
+    });
+  }
+
+  const capRowsDone = ALL_CAP_ENTRIES.every((e) => touchedCapRows.has(e));
+  const completedCapRowCount = CAPABILITY_KEYS.filter(
+    (k) => touchedCapRows.has(`faction_${k}`) && touchedCapRows.has(`us_${k}`)
+  ).length;
+
+  const isSetupReady = step.section !== 'SETUP' || (capRowsDone && SETUP_SECTIONS.every((s) => touchedSections.has(s)));
+  const missingSections: string[] = [];
+  if (step.section === 'SETUP') {
+    if (!capRowsDone) missingSections.push(`Capability Tracks (${completedCapRowCount}/${CAPABILITY_KEYS.length} rows)`);
+    SETUP_SECTIONS.forEach((s) => { if (!touchedSections.has(s)) missingSections.push(SETUP_SECTION_LABELS[s]); });
+  }
 
   // Only reset inputs when a new step/repeat arrives and we're already in input phase.
   // If we're showing outcomes, keep showing them until user clicks Next.
@@ -270,13 +297,18 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
                   return { faction: f, us: u } as CapabilityTracks;
                 })()}
                 onChange={(next) => {
-                  markTouched('capabilities');
                   for (const k of CAPABILITY_KEYS) {
                     handleChange(`faction_${k}`, next.faction[k]);
                     handleChange(`us_${k}`, next.us[k]);
                   }
                 }}
+                onTouchRow={(key, peer) => touchCapRow(key, peer)}
               />
+              {!capRowsDone && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Set each row for both Faction and US — {completedCapRowCount}/{CAPABILITY_KEYS.length} rows confirmed
+                </p>
+              )}
               <div className="mt-4">
                 <RelationsTrackBoard
                   level={(Number(inputs['usRelationLevel'] ?? 3)) as USRelationLevel}
@@ -334,7 +366,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
       <div className="space-y-2 pt-2">
         {!isSetupReady && (
           <p className="text-xs text-amber-600 dark:text-amber-400">
-            Please confirm: {missingSections.map((s) => SETUP_SECTION_LABELS[s]).join(', ')}
+            Please confirm: {missingSections.join(', ')}
           </p>
         )}
         <div className="flex gap-2">

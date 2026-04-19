@@ -16,6 +16,7 @@ interface Props {
   tracks: CapabilityTracks;
   faction: Faction;
   onChange?: (next: CapabilityTracks) => void;
+  onTouchRow?: (key: CapabilityKey, peer: 'faction' | 'us') => void;
   compareTo?: CapabilityTracks;
 }
 
@@ -91,7 +92,7 @@ function TrackBox({ cap, box, faction, factionVal, usVal, activePeer, editable, 
   );
 }
 
-export function CapabilityTrackBoard({ tracks, faction, onChange, compareTo }: Props) {
+export function CapabilityTrackBoard({ tracks, faction, onChange, onTouchRow, compareTo }: Props) {
   const [activePeer, setActivePeer] = useState<Peer>('faction');
   const editable = Boolean(onChange);
 
@@ -109,6 +110,7 @@ export function CapabilityTrackBoard({ tracks, faction, onChange, compareTo }: P
     };
     next[activePeer][cap] = box;
     onChange(next);
+    onTouchRow?.(cap, activePeer);
   }
 
   return (
