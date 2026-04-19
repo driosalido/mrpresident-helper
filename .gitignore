@@ -43,6 +43,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# git worktrees
+.worktrees/
+
+# game docs (PDFs — large binary assets, not for version control)
+/docs/
+
 # override global gitignore which excludes lib/ directories
 !src/lib/
 !src/lib/**
