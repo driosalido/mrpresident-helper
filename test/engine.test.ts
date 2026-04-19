@@ -312,12 +312,10 @@ describe('Russia Step C — selection priority', () => {
   function makeCtxWithTracks(
     tracks: CapabilityTracks,
     posture: '1' | '2',
-    sel: number[],
     imp: number[],
   ) {
-    // Build a fake DiceResult for each die
+    // Build a fake DiceResult for each improvement die
     const dice: Record<string, { sum: number; modified: number }> = {};
-    sel.forEach((v, i) => { dice[`sel${i}`] = { sum: v, modified: v }; });
     imp.forEach((v, i) => { dice[`imp${i}`] = { sum: v, modified: v }; });
     return {
       faction: 'russia' as const,
@@ -339,7 +337,7 @@ describe('Russia Step C — selection priority', () => {
 
   it('priority 1: picks lag ≥ 2 cap over faction priority', () => {
     const tracks = makeTracks({ faction: { airForce: 1, groundForces: 4, navalForces: 4, cyber: 4, space: 4, strategicMissiles: 4, recon: 4 }, us: { airForce: 4, groundForces: 4, navalForces: 4, cyber: 4, space: 4, strategicMissiles: 4, recon: 4 } });
-    const ctx = makeCtxWithTracks(tracks, '1', [1, 1], [10, 10]);
+    const ctx = makeCtxWithTracks(tracks, '1', [10, 10]);
     if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
     const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string }[];
     expect(outcomes[0].summary).toContain('Air Force');
@@ -348,7 +346,7 @@ describe('Russia Step C — selection priority', () => {
 
   it('priority 2: picks Cyber when no lag and both pair eligible', () => {
     const tracks = makeTracks();
-    const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [10, 10]);
+    const ctx = makeCtxWithTracks(tracks, '1', [10, 10]);
     if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
     const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string }[];
     expect(outcomes[0].summary).toContain('Cyber');
@@ -357,7 +355,7 @@ describe('Russia Step C — selection priority', () => {
 
   it('success roll ≤ threshold advances track and stores to sharedState', () => {
     const tracks = makeTracks();
-    const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [3, 3]);
+    const ctx = makeCtxWithTracks(tracks, '1', [3, 3]);
     if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
     const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string; mutations?: { kind: string; target?: string; value?: unknown }[]; boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks } }[];
     const updateOutcome = outcomes.find((o) => o.mutations?.some((m) => m.target === 'capabilityTracks'));
@@ -368,7 +366,7 @@ describe('Russia Step C — selection priority', () => {
 
   it('tracksUpdate outcome carries boardSnapshot with before/after', () => {
     const tracks = makeTracks();
-    const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [3, 3]);
+    const ctx = makeCtxWithTracks(tracks, '1', [3, 3]);
     if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
     const outcomes = stepC.resolution.resolve(ctx as never) as { id: string; boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks } }[];
     const updateOutcome = outcomes.find((o) => o.id === 'russia.C.tracksUpdate');

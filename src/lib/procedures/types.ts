@@ -96,10 +96,10 @@ export interface Step {
   id: string;
   section: Section;
   title: string;
-  help?: string;
+  help?: string | ((sharedState: Record<string, unknown>) => string);
   guard?: (ctx: StepCtx) => boolean;
   inputs?: InputSpec[];
-  dice?: DiceSpec[];
+  dice?: DiceSpec[] | ((sharedState: Record<string, unknown>) => DiceSpec[]);
   repeat?: RepeatSpec;
   resolution: Resolution;
 }

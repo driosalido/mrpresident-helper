@@ -15,6 +15,7 @@ interface Props {
   repeatIndex: number;
   repeatTotal: number;
   actionBudget: number;
+  sharedState: Record<string, unknown>;
   onResolve: (inputs: Inputs) => LogEntry | null;
   onSkip: () => void;
   onNext: () => void;
@@ -38,7 +39,7 @@ function defaultInputs(step: Step): Inputs {
 
 type Phase = 'input' | 'outcome';
 
-export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, onResolve, onSkip, onNext }: Props) {
+export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, sharedState, onResolve, onSkip, onNext }: Props) {
   const [inputs, setInputs] = useState<Inputs>(() => defaultInputs(step));
   const [phase, setPhase] = useState<Phase>('input');
   const [resolvedEntry, setResolvedEntry] = useState<LogEntry | null>(null);
@@ -106,6 +107,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     onNext();
   }
 
+  const helpText = typeof step.help === 'function' ? step.help(sharedState) : step.help;
   const isRussia = faction === 'russia';
   const accentBtn = isRussia
     ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
@@ -118,7 +120,8 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     ? ` — ${step.repeat?.label ?? 'Attempt'} ${repeatIndex + 1} of ${repeatTotal}`
     : '';
 
-  const hasDice = (step.dice ?? []).length > 0;
+  const resolvedDice = typeof step.dice === 'function' ? step.dice(sharedState) : (step.dice ?? []);
+  const hasDice = resolvedDice.length > 0;
   const hasInputs = (step.inputs ?? []).length > 0;
 
   // Outcome phase: show results from the just-resolved step
@@ -162,8 +165,8 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {step.title}{repeatLabel}
           </h2>
-          {step.help && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{step.help}</p>
+          {helpText && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{helpText}</p>
           )}
         </div>
       </div>
