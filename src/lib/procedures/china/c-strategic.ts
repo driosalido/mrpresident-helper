@@ -146,6 +146,7 @@ export const stepsC: Step[] = [
         outcomes.push({
           id: 'china.C.tracksUpdate',
           summary: 'Capability tracks updated in session.',
+          hidden: true,
           mutations: [{ kind: 'set', target: 'capabilityTracks', value: tracks }],
           boardSnapshot: { before: tracksRaw, after: tracks, faction: 'china' },
         });

@@ -68,6 +68,7 @@ export interface Outcome {
   mutations?: Mutation[];
   consumesAction?: boolean; // default true inside section H
   boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks; faction: Faction };
+  hidden?: boolean; // suppress card display; mutations still apply
 }
 
 // ─── Resolutions ──────────────────────────────────────────────────────────────

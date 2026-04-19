@@ -35,17 +35,10 @@ function OutcomeCard({ outcome }: { outcome: Outcome }) {
 
   return (
     <div className={`rounded-lg border p-4 space-y-2 ${isAutoLoss ? 'border-red-400 bg-red-50 dark:bg-red-950' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'}`}>
-      {outcome.boardSnapshot && (
-        <div className="pb-2 border-b border-gray-100 dark:border-gray-800">
-          <CapabilityTrackBoard
-            tracks={outcome.boardSnapshot.after}
-            compareTo={outcome.boardSnapshot.before}
-            faction={outcome.boardSnapshot.faction}
-          />
-        </div>
-      )}
       <p className={`font-semibold text-sm ${isAutoLoss ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-gray-100'}`}>
-        {outcome.summary}
+        {outcome.summary.split(/\*\*([^*]+)\*\*/).map((part, i) =>
+          i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+        )}
       </p>
       {outcome.detail && (
         <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{outcome.detail}</p>
@@ -74,9 +67,21 @@ export function OutcomePanel({ outcomes }: { outcomes: Outcome[] }) {
   return (
     <div className="space-y-2">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Result</h3>
-      {outcomes.map((o) => (
-        <OutcomeCard key={o.id} outcome={o} />
-      ))}
+      {outcomes.map((o) => {
+        if (o.hidden) {
+          if (!o.boardSnapshot) return null;
+          return (
+            <div key={o.id} className="pt-1">
+              <CapabilityTrackBoard
+                tracks={o.boardSnapshot.after}
+                compareTo={o.boardSnapshot.before}
+                faction={o.boardSnapshot.faction}
+              />
+            </div>
+          );
+        }
+        return <OutcomeCard key={o.id} outcome={o} />;
+      })}
     </div>
   );
 }

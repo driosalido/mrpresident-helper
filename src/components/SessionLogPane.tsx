@@ -19,8 +19,8 @@ function EntryRow({ entry, index }: { entry: LogEntry; index: number }) {
           {r.label ?? r.id}: {r.raw.join('+')}={r.sum} → {r.drmTotal !== 0 ? `DRM${r.drmTotal > 0 ? '+' : ''}${r.drmTotal} → ` : ''}<strong>{r.modified}</strong>
         </p>
       ))}
-      {entry.outcomes.map((o) => (
-        <p key={o.id} className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">→ {o.summary}</p>
+      {entry.outcomes.filter((o) => !o.hidden).map((o) => (
+        <p key={o.id} className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">→ {o.summary.replace(/\*\*([^*]+)\*\*/g, '$1')}</p>
       ))}
     </div>
   );
