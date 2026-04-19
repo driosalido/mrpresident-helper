@@ -39,18 +39,6 @@ export const stepsB: Step[] = [
         min: 0,
       },
       {
-        id: 'relationsBox',
-        kind: 'enum',
-        label: 'China/US Relations Track box',
-        options: [
-          { value: '1', label: '1 — Cold War Adversaries' },
-          { value: '2', label: '2 — Distrust' },
-          { value: '3', label: '3 — Neutral' },
-          { value: '4', label: '4 — Trading Partners' },
-          { value: '5', label: '5 — Friends & Partners' },
-        ],
-      },
-      {
         id: 'soe',
         kind: 'enum',
         label: 'China State of the Economy (SoE)',
@@ -70,8 +58,9 @@ export const stepsB: Step[] = [
         const posture = Number(ctx.inputs.posture);
         const sum = Number(ctx.inputs.tensionsSum);
         const count = Number(ctx.inputs.tensionsCount);
-        const relations = Number(ctx.inputs.relationsBox);
         const soe = Number(ctx.inputs.soe);
+        const currentRelation = (ctx.sharedState['usRelation'] as USRelation | undefined) ?? DEFAULT_US_RELATION;
+        const relations = currentRelation.level;
         const outcomes = [];
 
         let newPosture = posture;
@@ -109,7 +98,6 @@ export const stepsB: Step[] = [
         });
 
         // Relations trending — accumulator model
-        const currentRelation = (ctx.sharedState['usRelation'] as USRelation | undefined) ?? DEFAULT_US_RELATION;
         let newRelation: USRelation;
         let relationsNote: string;
 
