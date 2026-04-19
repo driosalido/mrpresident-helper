@@ -23,15 +23,24 @@ interface Props {
   isCurrentStep: boolean;
 }
 
-function defaultInputs(step: Step): Inputs {
+function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): Inputs {
   const defaults: Inputs = {};
+  const savedTracks = step.section === 'SETUP'
+    ? sharedState['capabilityTracks'] as CapabilityTracks | undefined
+    : undefined;
   for (const spec of step.inputs ?? []) {
     if (spec.kind === 'int') defaults[spec.id] = spec.min ?? 0;
     else if (spec.kind === 'bool') defaults[spec.id] = false;
     else if (spec.kind === 'enum' || spec.kind === 'choice') defaults[spec.id] = spec.options[0]?.value ?? '';
     else if (spec.kind === 'capRow') {
-      defaults[spec.factionId] = spec.min ?? 1;
-      defaults[spec.usId] = spec.min ?? 1;
+      if (savedTracks) {
+        const key = spec.factionId.replace('faction_', '');
+        defaults[spec.factionId] = (savedTracks.faction as Record<string, number>)[key] ?? (spec.min ?? 1);
+        defaults[spec.usId] = (savedTracks.us as Record<string, number>)[key] ?? (spec.min ?? 1);
+      } else {
+        defaults[spec.factionId] = spec.min ?? 1;
+        defaults[spec.usId] = spec.min ?? 1;
+      }
     }
   }
   return defaults;
@@ -40,7 +49,7 @@ function defaultInputs(step: Step): Inputs {
 type Phase = 'input' | 'outcome';
 
 export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, sharedState, onResolve, onSkip, onNext }: Props) {
-  const [inputs, setInputs] = useState<Inputs>(() => defaultInputs(step));
+  const [inputs, setInputs] = useState<Inputs>(() => defaultInputs(step, sharedState));
   const [phase, setPhase] = useState<Phase>('input');
   const [resolvedEntry, setResolvedEntry] = useState<LogEntry | null>(null);
   const [resolvedTitle, setResolvedTitle] = useState('');
@@ -51,7 +60,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
   // If we're showing outcomes, keep showing them until user clicks Next.
   useEffect(() => {
     if (phase === 'input') {
-      setInputs(defaultInputs(step));
+      setInputs(defaultInputs(step, sharedState));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step.id, repeatIndex]);
@@ -141,7 +150,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
           {resolvedEntry.rolls && resolvedEntry.rolls.length > 0 && (
             <DiceRollPanel rolls={resolvedEntry.rolls} />
           )}
-          <OutcomePanel outcomes={resolvedEntry.outcomes} />
+          <OutcomePanel outcomes={resolvedEntry.outcomes} faction={faction} />
           <button
             onClick={handleNext}
             className={`px-5 py-2 rounded-lg text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${accentBtn}`}
