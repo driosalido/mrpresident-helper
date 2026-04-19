@@ -50,11 +50,16 @@ export const stepsB: Step[] = [
       },
       {
         id: 'soe',
-        kind: 'int',
+        kind: 'enum',
         label: 'Russia State of the Economy (SoE)',
-        min: 1,
-        max: 7,
-        help: 'Needed for "Look Over There!" impetus check (SoE = 3 triggers Posture 1 → 2).',
+        options: [
+          { value: '3', label: '3 — Recession' },
+          { value: '4', label: '4 — Stagnation' },
+          { value: '5', label: '5 — Recovery' },
+          { value: '6', label: '6 — Peak Performance' },
+          { value: '7', label: '7 — Peak Performance' },
+        ],
+        help: 'SoE = 3 triggers "Look Over There!" impetus (Posture 1 → 2).',
       },
     ],
     resolution: {
