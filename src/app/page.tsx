@@ -244,6 +244,9 @@ function Footer() {
       >
         GitHub
       </a>
+      {process.env.NEXT_PUBLIC_APP_VERSION && (
+        <>{' · '}v{process.env.NEXT_PUBLIC_APP_VERSION}</>
+      )}
     </p>
   );
 }

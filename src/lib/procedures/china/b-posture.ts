@@ -17,15 +17,6 @@ export const stepsB: Step[] = [
     help: 'Flip all Tensions counters on China, sum their values, then resolve posture changes and relations shifts. Remove all Tensions; redraw half (round up), place face-down.',
     inputs: [
       {
-        id: 'posture',
-        kind: 'enum',
-        label: 'China current Posture',
-        options: [
-          { value: '1', label: 'Posture 1 (passive)' },
-          { value: '2', label: 'Posture 2 (aggressive)' },
-        ],
-      },
-      {
         id: 'tensionsSum',
         kind: 'int',
         label: 'Sum of all revealed China Tensions counters',
@@ -42,7 +33,7 @@ export const stepsB: Step[] = [
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const posture = Number(ctx.inputs.posture);
+        const posture = Number(ctx.sharedState['posture'] ?? 1);
         const sum = Number(ctx.inputs.tensionsSum);
         const count = Number(ctx.inputs.tensionsCount);
         const soe = Number(ctx.sharedState['soe'] ?? 5);

@@ -39,6 +39,15 @@ export const stepsSetup: Step[] = [
         ],
       },
       {
+        id: 'posture',
+        kind: 'enum' as const,
+        label: 'China current Posture',
+        options: [
+          { value: '1', label: 'Posture 1 (passive)' },
+          { value: '2', label: 'Posture 2 (aggressive)' },
+        ],
+      },
+      {
         id: 'soe',
         kind: 'enum' as const,
         label: 'China State of the Economy (SoE)',
@@ -76,16 +85,18 @@ export const stepsSetup: Step[] = [
         const trendInput = String(ctx.inputs['usRelationTrend'] ?? 'none');
         const pendingAntiUS = trendInput === 'antiUS' ? 1 : 0;
         const pendingProUS  = trendInput === 'proUS'  ? 1 : 0;
+        const posture = Number(ctx.inputs['posture'] ?? 1);
         const soe = Number(ctx.inputs['soe'] ?? 5);
         const soeTrend = String(ctx.inputs['soeTrend'] ?? 'none');
         return {
           id: 'china.SETUP.done',
-          summary: `Capability tracks, US Relation (${US_RELATION_LABELS[level]}) and SoE (${soe}) recorded.`,
+          summary: `Capability tracks, US Relation (${US_RELATION_LABELS[level]}), SoE (${soe}), Posture ${posture} recorded.`,
           mutations: [
             { kind: 'set', target: 'capabilityTracks', value: tracks },
             { kind: 'set', target: 'usRelation', value: { level, pendingAntiUS, pendingProUS } },
             { kind: 'set', target: 'soe', amount: soe },
             { kind: 'set', target: 'soeTrend', value: soeTrend },
+            { kind: 'set', target: 'posture', amount: posture },
           ],
         };
       },

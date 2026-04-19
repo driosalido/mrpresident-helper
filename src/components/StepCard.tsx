@@ -34,6 +34,7 @@ function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): I
   const savedRel = isSetup ? sharedState['usRelation'] as USRelation | undefined : undefined;
   const savedSoe = isSetup ? sharedState['soe'] as number | undefined : undefined;
   const savedSoeTrend = isSetup ? sharedState['soeTrend'] as string | undefined : undefined;
+  const savedPosture = isSetup ? sharedState['posture'] as number | undefined : undefined;
 
   for (const spec of step.inputs ?? []) {
     if (spec.kind === 'int') defaults[spec.id] = spec.min ?? 0;
@@ -47,6 +48,8 @@ function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): I
         defaults[spec.id] = String(savedSoe);
       } else if (isSetup && spec.id === 'soeTrend' && savedSoeTrend !== undefined) {
         defaults[spec.id] = savedSoeTrend;
+      } else if (isSetup && spec.id === 'posture' && savedPosture !== undefined) {
+        defaults[spec.id] = String(savedPosture);
       } else {
         defaults[spec.id] = spec.options[0]?.value ?? '';
       }
@@ -64,6 +67,15 @@ function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): I
   return defaults;
 }
 
+const SETUP_SECTIONS = ['capabilities', 'relations', 'economy', 'posture'] as const;
+type SetupSection = typeof SETUP_SECTIONS[number];
+const SETUP_SECTION_LABELS: Record<SetupSection, string> = {
+  capabilities: 'Capability Tracks',
+  relations: 'US Relations',
+  economy: 'Economy (SoE)',
+  posture: 'Posture',
+};
+
 type Phase = 'input' | 'outcome';
 
 export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, sharedState, onResolve, onSkip, onNext }: Props) {
@@ -73,6 +85,29 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
   const [resolvedTitle, setResolvedTitle] = useState('');
   const [resolvedSection, setResolvedSection] = useState(step.section);
   const [resolvedRepeatLabel, setResolvedRepeatLabel] = useState('');
+  // For SETUP: track which sections have been explicitly touched
+  const [touchedSections, setTouchedSections] = useState<Set<SetupSection>>(
+    // Pre-mark sections as touched if sharedState has prior values (resuming SETUP)
+    () => {
+      if (step.section !== 'SETUP') return new Set<SetupSection>();
+      const pre = new Set<SetupSection>();
+      if (sharedState['capabilityTracks']) pre.add('capabilities');
+      if (sharedState['usRelation']) pre.add('relations');
+      if (sharedState['soe'] !== undefined) pre.add('economy');
+      if (sharedState['posture'] !== undefined) pre.add('posture');
+      return pre;
+    }
+  );
+
+  function markTouched(section: SetupSection) {
+    setTouchedSections((prev) => {
+      if (prev.has(section)) return prev;
+      return new Set([...prev, section]);
+    });
+  }
+
+  const isSetupReady = step.section !== 'SETUP' || SETUP_SECTIONS.every((s) => touchedSections.has(s));
+  const missingSections = SETUP_SECTIONS.filter((s) => !touchedSections.has(s));
 
   // Only reset inputs when a new step/repeat arrives and we're already in input phase.
   // If we're showing outcomes, keep showing them until user clicks Next.
@@ -235,6 +270,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
                   return { faction: f, us: u } as CapabilityTracks;
                 })()}
                 onChange={(next) => {
+                  markTouched('capabilities');
                   for (const k of CAPABILITY_KEYS) {
                     handleChange(`faction_${k}`, next.faction[k]);
                     handleChange(`us_${k}`, next.us[k]);
@@ -247,8 +283,8 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
                   pendingAntiUS={inputs['usRelationTrend'] === 'antiUS' ? 1 : 0}
                   pendingProUS={inputs['usRelationTrend'] === 'proUS' ? 1 : 0}
                   faction={faction}
-                  onChangeLevel={(v) => handleChange('usRelationLevel', v)}
-                  onChangeTrend={(t) => handleChange('usRelationTrend', t)}
+                  onChangeLevel={(v) => { markTouched('relations'); handleChange('usRelationLevel', v); }}
+                  onChangeTrend={(t) => { markTouched('relations'); handleChange('usRelationTrend', t); }}
                 />
               </div>
               <div className="mt-4">
@@ -256,9 +292,28 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
                   value={(Number(inputs['soe'] ?? 4)) as SoEValue}
                   trend={(inputs['soeTrend'] as SoETrend) ?? 'none'}
                   faction={faction}
-                  onChange={(v) => handleChange('soe', v)}
-                  onChangeTrend={(t) => handleChange('soeTrend', t)}
+                  onChange={(v) => { markTouched('economy'); handleChange('soe', v); }}
+                  onChangeTrend={(t) => { markTouched('economy'); handleChange('soeTrend', t); }}
                 />
+              </div>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Current Posture</p>
+                <div className="flex gap-2">
+                  {[{ v: '1', label: 'Posture 1 — Passive' }, { v: '2', label: 'Posture 2 — Aggressive' }].map(({ v, label }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { markTouched('posture'); handleChange('posture', v); }}
+                      className={`flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all ${
+                        inputs['posture'] === v
+                          ? `${isRussia ? 'bg-red-600 border-red-500 ring-4 ring-red-400' : 'bg-amber-600 border-amber-500 ring-4 ring-amber-400'} text-white`
+                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           ) : (
@@ -276,21 +331,29 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-2 pt-2">
-        <button
-          onClick={handleRoll}
-          className={`px-5 py-2 rounded-lg text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${accentBtn}`}
-        >
-          {hasDice ? 'Roll & Resolve' : 'Resolve'}
-        </button>
-        {step.guard && (
-          <button
-            onClick={onSkip}
-            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            Skip (not triggered)
-          </button>
+      <div className="space-y-2 pt-2">
+        {!isSetupReady && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Please confirm: {missingSections.map((s) => SETUP_SECTION_LABELS[s]).join(', ')}
+          </p>
         )}
+        <div className="flex gap-2">
+          <button
+            onClick={handleRoll}
+            disabled={!isSetupReady}
+            className={`px-5 py-2 rounded-lg text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed ${accentBtn}`}
+          >
+            {hasDice ? 'Roll & Resolve' : 'Resolve'}
+          </button>
+          {step.guard && (
+            <button
+              onClick={onSkip}
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              Skip (not triggered)
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
