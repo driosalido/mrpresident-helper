@@ -99,6 +99,7 @@ export const stepsB: Step[] = [
           summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
           mutations: [
             { kind: 'set', target: 'posture', amount: newPosture },
+            { kind: 'set', target: 'soe', amount: soe },
           ],
         });
 

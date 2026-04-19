@@ -6,8 +6,11 @@ import { InputField } from './InputField';
 import { DiceRollPanel } from './DiceRollPanel';
 import { OutcomePanel } from './OutcomePanel';
 import { CapabilityTrackBoard } from './CapabilityTrackBoard';
+import { RelationsTrackBoard } from './RelationsTrackBoard';
+import { EconomyTrackBoard } from './EconomyTrackBoard';
 import { CAPABILITY_KEYS } from '@/lib/procedures/capabilities';
 import type { CapabilityTracks } from '@/lib/procedures/capabilities';
+import type { USRelationLevel } from '@/lib/procedures/usRelation';
 
 interface Props {
   step: Step;
@@ -223,16 +226,35 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
                   }
                 }}
               />
-              {step.inputs!.filter((s) => s.kind !== 'capRow').map((spec) => (
-                <div key={spec.id} className="mt-4">
-                  <InputField
-                    spec={spec}
-                    value={inputs[spec.id] ?? ''}
-                    allValues={inputs}
-                    onChange={handleChange}
-                  />
-                </div>
+              <div className="mt-4">
+                <RelationsTrackBoard
+                  level={(Number(inputs['usRelationLevel'] ?? 3)) as USRelationLevel}
+                  pendingAntiUS={inputs['usRelationTrend'] === 'antiUS' ? 1 : 0}
+                  pendingProUS={inputs['usRelationTrend'] === 'proUS' ? 1 : 0}
+                  faction={faction}
+                  onChangeLevel={(v) => handleChange('usRelationLevel', v)}
+                  onChangeTrend={(t) => handleChange('usRelationTrend', t)}
+                />
+              </div>
+            </>
+          ) : step.section === 'B' ? (
+            <>
+              {step.inputs!.filter((s) => s.id !== 'soe').map((spec) => (
+                <InputField
+                  key={spec.id}
+                  spec={spec}
+                  value={inputs[spec.id] ?? ''}
+                  allValues={inputs}
+                  onChange={handleChange}
+                />
               ))}
+              <div className="mt-3">
+                <EconomyTrackBoard
+                  value={(Number(inputs['soe'] ?? 3)) as 3 | 4 | 5 | 6 | 7}
+                  faction={faction}
+                  onChange={(v) => handleChange('soe', v)}
+                />
+              </div>
             </>
           ) : (
             step.inputs!.map((spec) => (
