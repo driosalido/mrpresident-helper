@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mr. President — Opponent Procedure Assistant
 
-## Getting Started
+A guided wizard for running the automated opponent procedures in **GMT Games' Mr. President (2nd Edition)**. Covers the Russia Acts (WPR1) and China Acts (WPC1) faction procedures with step-by-step navigation, automatic dice rolling, and session logging.
 
-First, run the development server:
+Live at **https://mrpresident-helper.vercel.app**
+
+> **Note:** This tool requires the physical board game. It does not include any game content — it only automates the procedure steps described in the rulebook.
+
+## What it does
+
+- Walks you through each section (A → H) of the Russia or China opponent procedure
+- Rolls dice and applies modifiers automatically at each step
+- Supports both Regular (A → H) and Crisis-Chit (jump to Section H, 2 Actions) entry modes
+- Tracks session state so you can pick up where you left off (stored locally per device)
+- Logs the full play history for reference during the game
+- Works on desktop, phone, and tablet — no install required
+
+## Running locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev       # http://localhost:3000
+npm test          # run the test suite
+npm run build     # production build
+npm run lint      # eslint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+  lib/
+    procedures/   # Faction data (russia/, china/) and shared types
+    engine/       # Step runner, session management, storage, dice, resolver
+    util/         # Markdown export and helpers
+  store/
+    session.ts    # Zustand store — single source of truth for active session
+  components/     # UI: StepCard, DiceRollPanel, OutcomePanel, SessionLogPane
+  app/
+    page.tsx            # Home — faction picker and session archive
+    run/[faction]/      # Wizard — step-by-step procedure runner
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Stack
 
-## Learn More
+- Next.js 16 (App Router) + React 19
+- Tailwind CSS v4
+- Zustand for session state, persisted to `localStorage` (state is per-device, not synced)
+- Vitest for unit tests
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+MIT — see [LICENSE](LICENSE).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Contributing
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
