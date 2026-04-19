@@ -10,7 +10,8 @@ import { RelationsTrackBoard } from './RelationsTrackBoard';
 import { EconomyTrackBoard } from './EconomyTrackBoard';
 import { CAPABILITY_KEYS } from '@/lib/procedures/capabilities';
 import type { CapabilityTracks } from '@/lib/procedures/capabilities';
-import type { USRelationLevel } from '@/lib/procedures/usRelation';
+import type { USRelation, USRelationLevel } from '@/lib/procedures/usRelation';
+import type { SoEValue, SoETrend } from './EconomyTrackBoard';
 
 interface Props {
   step: Step;
@@ -28,14 +29,28 @@ interface Props {
 
 function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): Inputs {
   const defaults: Inputs = {};
-  const savedTracks = step.section === 'SETUP'
-    ? sharedState['capabilityTracks'] as CapabilityTracks | undefined
-    : undefined;
+  const isSetup = step.section === 'SETUP';
+  const savedTracks = isSetup ? sharedState['capabilityTracks'] as CapabilityTracks | undefined : undefined;
+  const savedRel = isSetup ? sharedState['usRelation'] as USRelation | undefined : undefined;
+  const savedSoe = isSetup ? sharedState['soe'] as number | undefined : undefined;
+  const savedSoeTrend = isSetup ? sharedState['soeTrend'] as string | undefined : undefined;
+
   for (const spec of step.inputs ?? []) {
     if (spec.kind === 'int') defaults[spec.id] = spec.min ?? 0;
     else if (spec.kind === 'bool') defaults[spec.id] = false;
-    else if (spec.kind === 'enum' || spec.kind === 'choice') defaults[spec.id] = spec.options[0]?.value ?? '';
-    else if (spec.kind === 'capRow') {
+    else if (spec.kind === 'enum' || spec.kind === 'choice') {
+      if (isSetup && spec.id === 'usRelationLevel' && savedRel) {
+        defaults[spec.id] = String(savedRel.level);
+      } else if (isSetup && spec.id === 'usRelationTrend' && savedRel) {
+        defaults[spec.id] = savedRel.pendingAntiUS > 0 ? 'antiUS' : savedRel.pendingProUS > 0 ? 'proUS' : 'none';
+      } else if (isSetup && spec.id === 'soe' && savedSoe !== undefined) {
+        defaults[spec.id] = String(savedSoe);
+      } else if (isSetup && spec.id === 'soeTrend' && savedSoeTrend !== undefined) {
+        defaults[spec.id] = savedSoeTrend;
+      } else {
+        defaults[spec.id] = spec.options[0]?.value ?? '';
+      }
+    } else if (spec.kind === 'capRow') {
       if (savedTracks) {
         const key = spec.factionId.replace('faction_', '');
         defaults[spec.factionId] = (savedTracks.faction as Record<string, number>)[key] ?? (spec.min ?? 1);
@@ -236,23 +251,13 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
                   onChangeTrend={(t) => handleChange('usRelationTrend', t)}
                 />
               </div>
-            </>
-          ) : step.section === 'B' ? (
-            <>
-              {step.inputs!.filter((s) => s.id !== 'soe').map((spec) => (
-                <InputField
-                  key={spec.id}
-                  spec={spec}
-                  value={inputs[spec.id] ?? ''}
-                  allValues={inputs}
-                  onChange={handleChange}
-                />
-              ))}
-              <div className="mt-3">
+              <div className="mt-4">
                 <EconomyTrackBoard
-                  value={(Number(inputs['soe'] ?? 3)) as 3 | 4 | 5 | 6 | 7}
+                  value={(Number(inputs['soe'] ?? 4)) as SoEValue}
+                  trend={(inputs['soeTrend'] as SoETrend) ?? 'none'}
                   faction={faction}
                   onChange={(v) => handleChange('soe', v)}
+                  onChangeTrend={(t) => handleChange('soeTrend', t)}
                 />
               </div>
             </>

@@ -42,19 +42,6 @@ export const stepsB: Step[] = [
         min: 0,
         help: 'Used to calculate how many to redraw (half, rounded up).',
       },
-      {
-        id: 'soe',
-        kind: 'enum',
-        label: 'Russia State of the Economy (SoE)',
-        options: [
-          { value: '3', label: '3 — Recession' },
-          { value: '4', label: '4 — Stagnation' },
-          { value: '5', label: '5 — Recovery' },
-          { value: '6', label: '6 — Peak Performance' },
-          { value: '7', label: '7 — Peak Performance' },
-        ],
-        help: 'SoE = 3 triggers "Look Over There!" impetus (Posture 1 → 2).',
-      },
     ],
     resolution: {
       kind: 'custom',
@@ -62,7 +49,7 @@ export const stepsB: Step[] = [
         const posture = Number(ctx.inputs.posture);
         const sum = Number(ctx.inputs.tensionsSum);
         const count = Number(ctx.inputs.tensionsCount);
-        const soe = Number(ctx.inputs.soe);
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
         const currentRelation = (ctx.sharedState['usRelation'] as USRelation | undefined) ?? DEFAULT_US_RELATION;
         const relations = currentRelation.level;
         const outcomes: Outcome[] = [];
@@ -99,7 +86,6 @@ export const stepsB: Step[] = [
           summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
           mutations: [
             { kind: 'set', target: 'posture', amount: newPosture },
-            { kind: 'set', target: 'soe', amount: soe },
           ],
         });
 

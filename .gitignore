@@ -52,3 +52,4 @@ next-env.d.ts
 # override global gitignore which excludes lib/ directories
 !src/lib/
 !src/lib/**
+.superpowers/

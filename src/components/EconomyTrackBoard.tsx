@@ -2,8 +2,9 @@
 
 import type { Faction } from '@/lib/procedures/types';
 
-const SOE_VALUES = [3, 4, 5, 6, 7] as const;
-type SoEValue = typeof SOE_VALUES[number];
+export const SOE_VALUES = [3, 4, 5, 6, 7] as const;
+export type SoEValue = typeof SOE_VALUES[number];
+export type SoETrend = 'none' | 'improving' | 'worsening';
 
 const SOE_LABEL: Record<SoEValue, string> = {
   3: 'Recession',
@@ -28,13 +29,19 @@ const BOX_SELECTED_RING: Record<Faction, string> = {
 
 interface Props {
   value: SoEValue;
+  trend: SoETrend;
   faction: Faction;
   onChange: (value: SoEValue) => void;
+  onChangeTrend: (trend: SoETrend) => void;
 }
 
-export function EconomyTrackBoard({ value, faction, onChange }: Props) {
+export function EconomyTrackBoard({ value, trend, faction, onChange, onChangeTrend }: Props) {
+  function handleTrendClick(t: 'improving' | 'worsening') {
+    onChangeTrend(trend === t ? 'none' : t);
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">State of the Economy (SoE)</p>
       <div className="flex gap-2 flex-wrap">
         {SOE_VALUES.map((v) => {
@@ -53,6 +60,27 @@ export function EconomyTrackBoard({ value, faction, onChange }: Props) {
             </button>
           );
         })}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400">Trend marker:</span>
+        <button
+          type="button"
+          onClick={() => handleTrendClick('improving')}
+          className={`px-3 py-1 rounded-md text-xs font-semibold border transition-colors ${trend === 'improving' ? 'bg-green-600 border-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-green-400'}`}
+        >
+          Improving ↑
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTrendClick('worsening')}
+          className={`px-3 py-1 rounded-md text-xs font-semibold border transition-colors ${trend === 'worsening' ? 'bg-red-600 border-red-500 text-white' : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-red-400'}`}
+        >
+          Worsening ↓
+        </button>
+        {trend === 'none' && (
+          <span className="text-xs text-gray-400 dark:text-gray-500 italic">None</span>
+        )}
       </div>
     </div>
   );
