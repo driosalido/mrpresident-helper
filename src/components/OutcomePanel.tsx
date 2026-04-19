@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { Outcome, Mutation } from '@/lib/procedures/types';
+import type { Outcome, Mutation, Faction } from '@/lib/procedures/types';
+import { CapabilityTrackBoard } from './CapabilityTrackBoard';
 
 function MutationItem({ m }: { m: Mutation }) {
   const [done, setDone] = useState(false);
@@ -29,13 +30,24 @@ function MutationItem({ m }: { m: Mutation }) {
   );
 }
 
-function OutcomeCard({ outcome }: { outcome: Outcome }) {
+function renderSummary(summary: string, faction: Faction) {
+  const accentClass = faction === 'russia'
+    ? 'text-red-600 dark:text-red-400'
+    : 'text-amber-600 dark:text-amber-400';
+  return summary.split(/\*\*([^*]+)\*\*/).map((part, i) =>
+    i % 2 === 1
+      ? <span key={i} className={`font-medium ${accentClass}`}>{part}</span>
+      : part
+  );
+}
+
+function OutcomeCard({ outcome, faction }: { outcome: Outcome; faction: Faction }) {
   const isAutoLoss = outcome.mutations?.some((m) => m.kind === 'autoLoss');
 
   return (
     <div className={`rounded-lg border p-4 space-y-2 ${isAutoLoss ? 'border-red-400 bg-red-50 dark:bg-red-950' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'}`}>
-      <p className={`font-semibold text-sm ${isAutoLoss ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-gray-100'}`}>
-        {outcome.summary}
+      <p className={`text-sm ${isAutoLoss ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-gray-100'}`}>
+        {renderSummary(outcome.summary, faction)}
       </p>
       {outcome.detail && (
         <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line">{outcome.detail}</p>
@@ -58,15 +70,27 @@ function OutcomeCard({ outcome }: { outcome: Outcome }) {
   );
 }
 
-export function OutcomePanel({ outcomes }: { outcomes: Outcome[] }) {
+export function OutcomePanel({ outcomes, faction }: { outcomes: Outcome[]; faction: Faction }) {
   if (outcomes.length === 0) return null;
 
   return (
     <div className="space-y-2">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Result</h3>
-      {outcomes.map((o) => (
-        <OutcomeCard key={o.id} outcome={o} />
-      ))}
+      {outcomes.map((o) => {
+        if (o.hidden) {
+          if (!o.boardSnapshot) return null;
+          return (
+            <div key={o.id} className="pt-1">
+              <CapabilityTrackBoard
+                tracks={o.boardSnapshot.after}
+                compareTo={o.boardSnapshot.before}
+                faction={o.boardSnapshot.faction}
+              />
+            </div>
+          );
+        }
+        return <OutcomeCard key={o.id} outcome={o} faction={faction} />;
+      })}
     </div>
   );
 }

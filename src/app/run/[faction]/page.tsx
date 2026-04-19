@@ -188,6 +188,7 @@ export default function WizardPage({ params, searchParams }: {
               repeatIndex={session.cursorRepeatIdx}
               repeatTotal={repeatTotal}
               actionBudget={session.actionBudget}
+              sharedState={session.sharedState}
               onResolve={resolve}
               onSkip={skip}
               onNext={() => {}}

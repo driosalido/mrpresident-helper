@@ -5,6 +5,9 @@ import type { Step, Inputs, LogEntry, Faction } from '@/lib/procedures/types';
 import { InputField } from './InputField';
 import { DiceRollPanel } from './DiceRollPanel';
 import { OutcomePanel } from './OutcomePanel';
+import { CapabilityTrackBoard } from './CapabilityTrackBoard';
+import { CAPABILITY_KEYS } from '@/lib/procedures/capabilities';
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 interface Props {
   step: Step;
@@ -12,6 +15,7 @@ interface Props {
   repeatIndex: number;
   repeatTotal: number;
   actionBudget: number;
+  sharedState: Record<string, unknown>;
   onResolve: (inputs: Inputs) => LogEntry | null;
   onSkip: () => void;
   onNext: () => void;
@@ -19,20 +23,33 @@ interface Props {
   isCurrentStep: boolean;
 }
 
-function defaultInputs(step: Step): Inputs {
+function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): Inputs {
   const defaults: Inputs = {};
+  const savedTracks = step.section === 'SETUP'
+    ? sharedState['capabilityTracks'] as CapabilityTracks | undefined
+    : undefined;
   for (const spec of step.inputs ?? []) {
     if (spec.kind === 'int') defaults[spec.id] = spec.min ?? 0;
     else if (spec.kind === 'bool') defaults[spec.id] = false;
     else if (spec.kind === 'enum' || spec.kind === 'choice') defaults[spec.id] = spec.options[0]?.value ?? '';
+    else if (spec.kind === 'capRow') {
+      if (savedTracks) {
+        const key = spec.factionId.replace('faction_', '');
+        defaults[spec.factionId] = (savedTracks.faction as Record<string, number>)[key] ?? (spec.min ?? 1);
+        defaults[spec.usId] = (savedTracks.us as Record<string, number>)[key] ?? (spec.min ?? 1);
+      } else {
+        defaults[spec.factionId] = spec.min ?? 1;
+        defaults[spec.usId] = spec.min ?? 1;
+      }
+    }
   }
   return defaults;
 }
 
 type Phase = 'input' | 'outcome';
 
-export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, onResolve, onSkip, onNext }: Props) {
-  const [inputs, setInputs] = useState<Inputs>(() => defaultInputs(step));
+export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, sharedState, onResolve, onSkip, onNext }: Props) {
+  const [inputs, setInputs] = useState<Inputs>(() => defaultInputs(step, sharedState));
   const [phase, setPhase] = useState<Phase>('input');
   const [resolvedEntry, setResolvedEntry] = useState<LogEntry | null>(null);
   const [resolvedTitle, setResolvedTitle] = useState('');
@@ -43,7 +60,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
   // If we're showing outcomes, keep showing them until user clicks Next.
   useEffect(() => {
     if (phase === 'input') {
-      setInputs(defaultInputs(step));
+      setInputs(defaultInputs(step, sharedState));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step.id, repeatIndex]);
@@ -83,6 +100,10 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
       : '';
     const result = onResolve(inputs);
     if (result) {
+      if (section === 'SETUP') {
+        onNext();
+        return;
+      }
       setResolvedEntry(result);
       setResolvedTitle(title);
       setResolvedSection(section);
@@ -99,6 +120,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     onNext();
   }
 
+  const helpText = typeof step.help === 'function' ? step.help(sharedState) : step.help;
   const isRussia = faction === 'russia';
   const accentBtn = isRussia
     ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
@@ -111,7 +133,8 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     ? ` — ${step.repeat?.label ?? 'Attempt'} ${repeatIndex + 1} of ${repeatTotal}`
     : '';
 
-  const hasDice = (step.dice ?? []).length > 0;
+  const resolvedDice = typeof step.dice === 'function' ? step.dice(sharedState) : (step.dice ?? []);
+  const hasDice = resolvedDice.length > 0;
   const hasInputs = (step.inputs ?? []).length > 0;
 
   // Outcome phase: show results from the just-resolved step
@@ -131,7 +154,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
           {resolvedEntry.rolls && resolvedEntry.rolls.length > 0 && (
             <DiceRollPanel rolls={resolvedEntry.rolls} />
           )}
-          <OutcomePanel outcomes={resolvedEntry.outcomes} />
+          <OutcomePanel outcomes={resolvedEntry.outcomes} faction={faction} />
           <button
             onClick={handleNext}
             className={`px-5 py-2 rounded-lg text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${accentBtn}`}
@@ -155,8 +178,8 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {step.title}{repeatLabel}
           </h2>
-          {step.help && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{step.help}</p>
+          {helpText && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{helpText}</p>
           )}
         </div>
       </div>
@@ -175,14 +198,36 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
       {hasInputs && (
         <div className="space-y-1 border-t border-gray-100 dark:border-gray-800 pt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Board State</p>
-          {step.inputs!.map((spec) => (
-            <InputField
-              key={spec.id}
-              spec={spec}
-              value={inputs[spec.id] ?? ''}
-              onChange={handleChange}
+          {step.section === 'SETUP' ? (
+            <CapabilityTrackBoard
+              faction={faction}
+              tracks={(() => {
+                const f: Record<string, number> = {};
+                const u: Record<string, number> = {};
+                for (const k of CAPABILITY_KEYS) {
+                  f[k] = Number(inputs[`faction_${k}`] ?? 1);
+                  u[k] = Number(inputs[`us_${k}`] ?? 1);
+                }
+                return { faction: f, us: u } as CapabilityTracks;
+              })()}
+              onChange={(next) => {
+                for (const k of CAPABILITY_KEYS) {
+                  handleChange(`faction_${k}`, next.faction[k]);
+                  handleChange(`us_${k}`, next.us[k]);
+                }
+              }}
             />
-          ))}
+          ) : (
+            step.inputs!.map((spec) => (
+              <InputField
+                key={spec.id}
+                spec={spec}
+                value={inputs[spec.id] ?? ''}
+                allValues={inputs}
+                onChange={handleChange}
+              />
+            ))
+          )}
         </div>
       )}
 

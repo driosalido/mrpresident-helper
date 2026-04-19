@@ -3,7 +3,7 @@
 
 export type Faction = 'russia' | 'china';
 export type EntryMode = 'regular' | 'crisis-chit';
-export type Section = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export type Section = 'SETUP' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
 
 // ─── Inputs ──────────────────────────────────────────────────────────────────
 
@@ -11,7 +11,8 @@ export type InputSpec =
   | { id: string; kind: 'enum'; label: string; options: { value: string; label: string }[]; help?: string }
   | { id: string; kind: 'int'; label: string; min?: number; max?: number; help?: string }
   | { id: string; kind: 'bool'; label: string; help?: string }
-  | { id: string; kind: 'choice'; label: string; options: { value: string; label: string }[]; help?: string };
+  | { id: string; kind: 'choice'; label: string; options: { value: string; label: string }[]; help?: string }
+  | { id: string; kind: 'capRow'; label: string; factionId: string; usId: string; min?: number; max?: number };
 
 export type Inputs = Record<string, string | number | boolean>;
 
@@ -55,7 +56,10 @@ export interface Mutation {
   target?: string;
   amount?: number;
   note?: string;
+  value?: unknown;
 }
+
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 export interface Outcome {
   id: string;
@@ -63,6 +67,8 @@ export interface Outcome {
   detail?: string;
   mutations?: Mutation[];
   consumesAction?: boolean; // default true inside section H
+  boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks; faction: Faction };
+  hidden?: boolean; // suppress card display; mutations still apply
 }
 
 // ─── Resolutions ──────────────────────────────────────────────────────────────
@@ -91,10 +97,10 @@ export interface Step {
   id: string;
   section: Section;
   title: string;
-  help?: string;
+  help?: string | ((sharedState: Record<string, unknown>) => string);
   guard?: (ctx: StepCtx) => boolean;
   inputs?: InputSpec[];
-  dice?: DiceSpec[];
+  dice?: DiceSpec[] | ((sharedState: Record<string, unknown>) => DiceSpec[]);
   repeat?: RepeatSpec;
   resolution: Resolution;
 }

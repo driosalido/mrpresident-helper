@@ -1,4 +1,6 @@
 import type { Step, Outcome, InputSpec } from '@/lib/procedures/types';
+import { deriveCyberAdvH1 } from '@/lib/procedures/capabilities';
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 const triggered = (label = 'Does this action trigger?'): InputSpec[] => [
   {
@@ -34,16 +36,6 @@ export const stepsH: Step[] = [
     help: '1 attack (Posture 1) or 2 attacks (Posture 2). If Relations 4–5, target rolls of 1 or 2 are redirected to different rows.',
     inputs: [
       ...triggered('Does H1 trigger? (Always yes — H1 is always attempted first)'),
-      {
-        id: 'cyberAdv',
-        kind: 'enum',
-        label: 'China Cyber Warfare vs US Cyber Warfare',
-        options: [
-          { value: 'china_wins', label: 'China > US (Major ≤3, Success ≤9, Fail 10)' },
-          { value: 'equal',      label: 'Equal (Major ≤1, Success ≤7, Fail 8+)' },
-          { value: 'us_wins',    label: 'US > China (No Major, Success ≤5, Fail 6+)' },
-        ],
-      },
     ],
     repeat: {
       count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1),
@@ -70,10 +62,13 @@ export const stepsH: Step[] = [
         }
 
         const success = ctx.dice['cyberSuccess'].modified;
-        const adv = String(ctx.inputs.cyberAdv);
+        const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+        const adv = tracks
+          ? deriveCyberAdvH1(tracks.faction.cyber, tracks.us.cyber)
+          : 'equal';
 
         let level: 'major' | 'success' | 'fail';
-        if (adv === 'china_wins') {
+        if (adv === 'faction_wins') {
           level = success <= 3 ? 'major' : success <= 9 ? 'success' : 'fail';
         } else if (adv === 'equal') {
           level = success <= 1 ? 'major' : success <= 7 ? 'success' : 'fail';

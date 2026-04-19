@@ -10,7 +10,7 @@ import { saveSession, archiveSession, clearActiveSession } from './storage';
 
 function visibleSteps(procedure: Procedure, mode: Session['mode']): Step[] {
   if (mode === 'crisis-chit') {
-    return procedure.steps.filter((s) => s.section === 'H');
+    return procedure.steps.filter((s) => s.section === 'H' || s.section === 'SETUP');
   }
   return procedure.steps;
 }
@@ -40,6 +40,8 @@ function applyMutations(session: Session, mutations: Mutation[]): void {
       case 'set':
         if (m.target === 'actionBudget' && m.amount !== undefined) {
           session.actionBudget = m.amount;
+        } else if (m.target && m.value !== undefined) {
+          session.sharedState[m.target] = m.value;
         } else if (m.target && m.amount !== undefined) {
           session.sharedState[m.target] = m.amount;
         }
@@ -95,7 +97,8 @@ export function resolveStep(
   const ctx = buildCtx(session, inputs);
 
   // Roll dice
-  const rolls = (step.dice ?? []).map((spec) => {
+  const diceSpecs = typeof step.dice === 'function' ? step.dice(session.sharedState) : (step.dice ?? []);
+  const rolls = diceSpecs.map((spec) => {
     const result = executeRoll(spec, ctx);
     ctx.dice[result.id] = result;
     return result;
