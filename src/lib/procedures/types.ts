@@ -62,11 +62,18 @@ export interface Mutation {
 import type { CapabilityKey, CapabilityTracks } from '@/lib/procedures/capabilities';
 import type { USRelation } from '@/lib/procedures/usRelation';
 
+export interface StateChange {
+  label: string;
+  from: string;
+  to: string;
+}
+
 export interface Outcome {
   id: string;
   summary: string;
   detail?: string;
   mutations?: Mutation[];
+  stateChanges?: StateChange[];
   consumesAction?: boolean; // default true inside section H
   boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks; faction: Faction };
   hidden?: boolean; // suppress card display; mutations still apply

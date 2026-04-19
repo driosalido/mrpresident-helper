@@ -90,7 +90,8 @@ export const stepsE: Step[] = [
             const newSoe = Math.min(7, soe + 1);
             return {
               id: 'russia.E.improving',
-              summary: `Improving marker already present — SoE moves ${soe} → ${newSoe}. Remove marker.`,
+              summary: 'Improving marker already present — SoE moves up. Remove marker.',
+              stateChanges: [{ label: 'SoE', from: String(soe), to: String(newSoe) }],
               mutations: [
                 { kind: 'set', target: 'soe', amount: newSoe },
                 { kind: 'set', target: 'soeTrend', value: 'none' },
@@ -119,7 +120,8 @@ export const stepsE: Step[] = [
           const newSoe = Math.max(3, soe - 1);
           return {
             id: 'russia.E.worsening',
-            summary: `Worsening marker already present — SoE moves ${soe} → ${newSoe}. Remove marker. Subtract 1 from Russia Actions in Section F.`,
+            summary: 'Worsening marker already present — SoE moves down. Remove marker. Subtract 1 from Russia Actions in Section F.',
+            stateChanges: [{ label: 'SoE', from: String(soe), to: String(newSoe) }],
             mutations: [
               { kind: 'set', target: 'soe', amount: newSoe },
               { kind: 'set', target: 'soeTrend', value: 'none' },

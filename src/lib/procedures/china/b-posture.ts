@@ -69,7 +69,8 @@ export const stepsB: Step[] = [
 
         outcomes.push({
           id: 'china.B.posture',
-          summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
+          summary: postureNote,
+          stateChanges: [{ label: 'Posture', from: String(posture), to: String(newPosture) }],
           mutations: [
             { kind: 'set' as const, target: 'posture', amount: newPosture },
           ],
@@ -106,6 +107,9 @@ export const stepsB: Step[] = [
         outcomes.push({
           id: 'china.B.relations',
           summary: relationsNote,
+          stateChanges: newRelation.level !== currentRelation.level ? [
+            { label: 'US Relations', from: US_RELATION_LABELS[currentRelation.level], to: US_RELATION_LABELS[newRelation.level] },
+          ] : undefined,
           mutations: [
             { kind: 'set' as const, target: 'usRelation', value: newRelation },
           ],
