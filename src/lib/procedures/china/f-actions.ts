@@ -1,4 +1,5 @@
 import type { Step } from '@/lib/procedures/types';
+import type { USRelation } from '@/lib/procedures/usRelation';
 
 // Section F — Calculate Number of China Actions (same formula as Russia)
 
@@ -30,7 +31,9 @@ export const stepsF: Step[] = [
       kind: 'custom',
       resolve: (ctx) => {
         const soe = Number(ctx.sharedState['soe'] ?? 4);
-        const relMod = relationsModifier[Number(ctx.sharedState['relationsBox'] ?? 3)] ?? 0;
+        const rel = ctx.sharedState['usRelation'] as USRelation | undefined;
+        const relLevel = rel?.level ?? 3;
+        const relMod = relationsModifier[relLevel] ?? 0;
         const plus = Number(ctx.inputs.plusAPCounters);
         const minus = Number(ctx.inputs.minusAPCounters);
         const worsened = ctx.sharedState['worseningEconomy'] === 1 ? 1 : 0;
@@ -39,7 +42,10 @@ export const stepsF: Step[] = [
           id: 'china.F.actions',
           summary: `China Actions this turn: ${total}`,
           detail: `SoE(${soe}) + Relations(${relMod}) + AP(+${plus}/−${minus}) − worsening(${worsened}) = ${total}`,
-          mutations: [{ kind: 'set', target: 'actionBudget', amount: total }],
+          mutations: [
+            { kind: 'set', target: 'actionBudget', amount: total },
+            { kind: 'set', target: 'totalActions', value: total },
+          ],
         };
       },
     },

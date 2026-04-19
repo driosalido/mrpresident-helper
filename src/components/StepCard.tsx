@@ -6,8 +6,12 @@ import { InputField } from './InputField';
 import { DiceRollPanel } from './DiceRollPanel';
 import { OutcomePanel } from './OutcomePanel';
 import { CapabilityTrackBoard } from './CapabilityTrackBoard';
+import { RelationsTrackBoard } from './RelationsTrackBoard';
+import { EconomyTrackBoard } from './EconomyTrackBoard';
 import { CAPABILITY_KEYS } from '@/lib/procedures/capabilities';
 import type { CapabilityTracks } from '@/lib/procedures/capabilities';
+import type { USRelation, USRelationLevel } from '@/lib/procedures/usRelation';
+import type { SoEValue, SoETrend } from './EconomyTrackBoard';
 
 interface Props {
   step: Step;
@@ -25,14 +29,31 @@ interface Props {
 
 function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): Inputs {
   const defaults: Inputs = {};
-  const savedTracks = step.section === 'SETUP'
-    ? sharedState['capabilityTracks'] as CapabilityTracks | undefined
-    : undefined;
+  const isSetup = step.section === 'SETUP';
+  const savedTracks = isSetup ? sharedState['capabilityTracks'] as CapabilityTracks | undefined : undefined;
+  const savedRel = isSetup ? sharedState['usRelation'] as USRelation | undefined : undefined;
+  const savedSoe = isSetup ? sharedState['soe'] as number | undefined : undefined;
+  const savedSoeTrend = isSetup ? sharedState['soeTrend'] as string | undefined : undefined;
+  const savedPosture = isSetup ? sharedState['posture'] as number | undefined : undefined;
+
   for (const spec of step.inputs ?? []) {
     if (spec.kind === 'int') defaults[spec.id] = spec.min ?? 0;
     else if (spec.kind === 'bool') defaults[spec.id] = false;
-    else if (spec.kind === 'enum' || spec.kind === 'choice') defaults[spec.id] = spec.options[0]?.value ?? '';
-    else if (spec.kind === 'capRow') {
+    else if (spec.kind === 'enum' || spec.kind === 'choice') {
+      if (isSetup && spec.id === 'usRelationLevel' && savedRel) {
+        defaults[spec.id] = String(savedRel.level);
+      } else if (isSetup && spec.id === 'usRelationTrend' && savedRel) {
+        defaults[spec.id] = savedRel.pendingAntiUS > 0 ? 'antiUS' : savedRel.pendingProUS > 0 ? 'proUS' : 'none';
+      } else if (isSetup && spec.id === 'soe' && savedSoe !== undefined) {
+        defaults[spec.id] = String(savedSoe);
+      } else if (isSetup && spec.id === 'soeTrend' && savedSoeTrend !== undefined) {
+        defaults[spec.id] = savedSoeTrend;
+      } else if (isSetup && spec.id === 'posture' && savedPosture !== undefined) {
+        defaults[spec.id] = String(savedPosture);
+      } else {
+        defaults[spec.id] = spec.options[0]?.value ?? '';
+      }
+    } else if (spec.kind === 'capRow') {
       if (savedTracks) {
         const key = spec.factionId.replace('faction_', '');
         defaults[spec.factionId] = (savedTracks.faction as Record<string, number>)[key] ?? (spec.min ?? 1);
@@ -46,6 +67,17 @@ function defaultInputs(step: Step, sharedState: Record<string, unknown> = {}): I
   return defaults;
 }
 
+const SETUP_SECTIONS = ['relations', 'economy', 'posture'] as const;
+type SetupSection = typeof SETUP_SECTIONS[number];
+const SETUP_SECTION_LABELS: Record<SetupSection, string> = {
+  relations: 'US Relations',
+  economy: 'Economy (SoE)',
+  posture: 'Posture',
+};
+
+// All capability row+peer combos that must be explicitly clicked in SETUP
+const ALL_CAP_ENTRIES = CAPABILITY_KEYS.flatMap((k) => [`faction_${k}`, `us_${k}`]);
+
 type Phase = 'input' | 'outcome';
 
 export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget, sharedState, onResolve, onSkip, onNext }: Props) {
@@ -55,6 +87,41 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
   const [resolvedTitle, setResolvedTitle] = useState('');
   const [resolvedSection, setResolvedSection] = useState(step.section);
   const [resolvedRepeatLabel, setResolvedRepeatLabel] = useState('');
+  // For SETUP: relations/economy/posture always have a pre-selected value, so start as confirmed.
+  // Only capability tracks require explicit per-row clicks.
+  const [touchedSections, setTouchedSections] = useState<Set<SetupSection>>(
+    () => new Set<SetupSection>(SETUP_SECTIONS)
+  );
+
+  // Per-row capability touch tracking — always starts empty; user must explicitly click every row
+  const [touchedCapRows, setTouchedCapRows] = useState<Set<string>>(() => new Set<string>());
+
+  function markTouched(section: SetupSection) {
+    setTouchedSections((prev) => {
+      if (prev.has(section)) return prev;
+      return new Set([...prev, section]);
+    });
+  }
+
+  function touchCapRow(key: string, peer: 'faction' | 'us') {
+    const entry = `${peer}_${key}`;
+    setTouchedCapRows((prev) => {
+      if (prev.has(entry)) return prev;
+      return new Set([...prev, entry]);
+    });
+  }
+
+  const capRowsDone = ALL_CAP_ENTRIES.every((e) => touchedCapRows.has(e));
+  const completedCapRowCount = CAPABILITY_KEYS.filter(
+    (k) => touchedCapRows.has(`faction_${k}`) && touchedCapRows.has(`us_${k}`)
+  ).length;
+
+  const isSetupReady = step.section !== 'SETUP' || (capRowsDone && SETUP_SECTIONS.every((s) => touchedSections.has(s)));
+  const missingSections: string[] = [];
+  if (step.section === 'SETUP') {
+    if (!capRowsDone) missingSections.push(`Capability Tracks (${completedCapRowCount}/${CAPABILITY_KEYS.length} rows)`);
+    SETUP_SECTIONS.forEach((s) => { if (!touchedSections.has(s)) missingSections.push(SETUP_SECTION_LABELS[s]); });
+  }
 
   // Only reset inputs when a new step/repeat arrives and we're already in input phase.
   // If we're showing outcomes, keep showing them until user clicks Next.
@@ -184,13 +251,18 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
         </div>
       </div>
 
-      {/* Action budget indicator (H section) */}
-      {step.section === 'H' && (
+      {/* Action budget indicator (G and H sections) */}
+      {(step.section === 'G' || step.section === 'H') && (
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Remaining Actions:</span>
+          <span className="text-gray-500 dark:text-gray-400">Actions:</span>
           <span className={`font-bold tabular-nums ${actionBudget > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
             {actionBudget}
           </span>
+          {sharedState['totalActions'] !== undefined && (
+            <span className="text-gray-400 dark:text-gray-500 tabular-nums">
+              / {sharedState['totalActions'] as number} total
+            </span>
+          )}
         </div>
       )}
 
@@ -199,24 +271,70 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
         <div className="space-y-1 border-t border-gray-100 dark:border-gray-800 pt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Board State</p>
           {step.section === 'SETUP' ? (
-            <CapabilityTrackBoard
-              faction={faction}
-              tracks={(() => {
-                const f: Record<string, number> = {};
-                const u: Record<string, number> = {};
-                for (const k of CAPABILITY_KEYS) {
-                  f[k] = Number(inputs[`faction_${k}`] ?? 1);
-                  u[k] = Number(inputs[`us_${k}`] ?? 1);
-                }
-                return { faction: f, us: u } as CapabilityTracks;
-              })()}
-              onChange={(next) => {
-                for (const k of CAPABILITY_KEYS) {
-                  handleChange(`faction_${k}`, next.faction[k]);
-                  handleChange(`us_${k}`, next.us[k]);
-                }
-              }}
-            />
+            <>
+              <CapabilityTrackBoard
+                faction={faction}
+                tracks={(() => {
+                  const f: Record<string, number> = {};
+                  const u: Record<string, number> = {};
+                  for (const k of CAPABILITY_KEYS) {
+                    f[k] = Number(inputs[`faction_${k}`] ?? 1);
+                    u[k] = Number(inputs[`us_${k}`] ?? 1);
+                  }
+                  return { faction: f, us: u } as CapabilityTracks;
+                })()}
+                onChange={(next) => {
+                  for (const k of CAPABILITY_KEYS) {
+                    handleChange(`faction_${k}`, next.faction[k]);
+                    handleChange(`us_${k}`, next.us[k]);
+                  }
+                }}
+                onTouchRow={(key, peer) => touchCapRow(key, peer)}
+              />
+              {!capRowsDone && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Set each row for both Faction and US — {completedCapRowCount}/{CAPABILITY_KEYS.length} rows confirmed
+                </p>
+              )}
+              <div className="mt-4">
+                <RelationsTrackBoard
+                  level={(Number(inputs['usRelationLevel'] ?? 3)) as USRelationLevel}
+                  pendingAntiUS={inputs['usRelationTrend'] === 'antiUS' ? 1 : 0}
+                  pendingProUS={inputs['usRelationTrend'] === 'proUS' ? 1 : 0}
+                  faction={faction}
+                  onChangeLevel={(v) => { markTouched('relations'); handleChange('usRelationLevel', v); }}
+                  onChangeTrend={(t) => { markTouched('relations'); handleChange('usRelationTrend', t); }}
+                />
+              </div>
+              <div className="mt-4">
+                <EconomyTrackBoard
+                  value={(Number(inputs['soe'] ?? 4)) as SoEValue}
+                  trend={(inputs['soeTrend'] as SoETrend) ?? 'none'}
+                  faction={faction}
+                  onChange={(v) => { markTouched('economy'); handleChange('soe', v); }}
+                  onChangeTrend={(t) => { markTouched('economy'); handleChange('soeTrend', t); }}
+                />
+              </div>
+              <div className="mt-4 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Current Posture</p>
+                <div className="flex gap-2">
+                  {[{ v: '1', label: 'Posture 1 — Passive' }, { v: '2', label: 'Posture 2 — Aggressive' }].map(({ v, label }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { markTouched('posture'); handleChange('posture', v); }}
+                      className={`flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all ${
+                        inputs['posture'] === v
+                          ? `${isRussia ? 'bg-red-600 border-red-500 ring-4 ring-red-400' : 'bg-amber-600 border-amber-500 ring-4 ring-amber-400'} text-white`
+                          : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
           ) : (
             step.inputs!.map((spec) => (
               <InputField
@@ -232,21 +350,29 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-2 pt-2">
-        <button
-          onClick={handleRoll}
-          className={`px-5 py-2 rounded-lg text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${accentBtn}`}
-        >
-          {hasDice ? 'Roll & Resolve' : 'Resolve'}
-        </button>
-        {step.guard && (
-          <button
-            onClick={onSkip}
-            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            Skip (not triggered)
-          </button>
+      <div className="space-y-2 pt-2">
+        {!isSetupReady && (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Please confirm: {missingSections.join(', ')}
+          </p>
         )}
+        <div className="flex gap-2">
+          <button
+            onClick={handleRoll}
+            disabled={!isSetupReady}
+            className={`px-5 py-2 rounded-lg text-white text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed ${accentBtn}`}
+          >
+            {hasDice ? 'Roll & Resolve' : 'Resolve'}
+          </button>
+          {step.guard && (
+            <button
+              onClick={onSkip}
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              Skip (not triggered)
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

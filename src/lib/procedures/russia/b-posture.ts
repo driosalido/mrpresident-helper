@@ -1,9 +1,15 @@
 import type { Step, Outcome } from '@/lib/procedures/types';
+import {
+  US_RELATION_LABELS,
+  DEFAULT_US_RELATION,
+  applyTrendMarkers,
+  type USRelation,
+} from '@/lib/procedures/usRelation';
 
 // Section B — Posture Changes & Relationship with US
 // 1. Flip all Tensions counters on Russia, sum their values.
 // 2. Apply posture change table.
-// 3. Apply Relations-with-US trending.
+// 3. Apply Relations-with-US trending (accumulator model).
 // 4. Remove all Tensions; redraw half (rounded up), place number-side down.
 
 export const stepsB: Step[] = [
@@ -13,15 +19,6 @@ export const stepsB: Step[] = [
     title: 'Posture Changes & Relationship with US',
     help: 'Flip all Tensions counters on Russia, sum their values, then resolve posture changes and relations shifts. Remove all Tensions; redraw half (round up), place face-down.',
     inputs: [
-      {
-        id: 'posture',
-        kind: 'enum',
-        label: 'Russia current Posture',
-        options: [
-          { value: '1', label: 'Posture 1 (passive)' },
-          { value: '2', label: 'Posture 2 (aggressive)' },
-        ],
-      },
       {
         id: 'tensionsSum',
         kind: 'int',
@@ -36,40 +33,16 @@ export const stepsB: Step[] = [
         min: 0,
         help: 'Used to calculate how many to redraw (half, rounded up).',
       },
-      {
-        id: 'relationsBox',
-        kind: 'enum',
-        label: 'Russia/US Relations Track box',
-        options: [
-          { value: '1', label: '1 — Estranged' },
-          { value: '2', label: '2' },
-          { value: '3', label: '3' },
-          { value: '4', label: '4' },
-          { value: '5', label: '5 — Very Close' },
-        ],
-      },
-      {
-        id: 'soe',
-        kind: 'enum',
-        label: 'Russia State of the Economy (SoE)',
-        options: [
-          { value: '3', label: '3 — Recession' },
-          { value: '4', label: '4 — Stagnation' },
-          { value: '5', label: '5 — Recovery' },
-          { value: '6', label: '6 — Peak Performance' },
-          { value: '7', label: '7 — Peak Performance' },
-        ],
-        help: 'SoE = 3 triggers "Look Over There!" impetus (Posture 1 → 2).',
-      },
     ],
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const posture = Number(ctx.inputs.posture);
+        const posture = Number(ctx.sharedState['posture'] ?? 1);
         const sum = Number(ctx.inputs.tensionsSum);
         const count = Number(ctx.inputs.tensionsCount);
-        const relations = Number(ctx.inputs.relationsBox);
-        const soe = Number(ctx.inputs.soe);
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
+        const currentRelation = (ctx.sharedState['usRelation'] as USRelation | undefined) ?? DEFAULT_US_RELATION;
+        const relations = currentRelation.level;
         const outcomes: Outcome[] = [];
 
         // Posture change
@@ -87,7 +60,6 @@ export const stepsB: Step[] = [
             postureNote = `Posture stays at 1.`;
           }
         } else {
-          // posture === 2
           if (sum <= 1 && relations >= 4) {
             newPosture = 1;
             postureNote = `Tensions ≤ 1 and Relations ≥ 4 → Posture changes back to 1.`;
@@ -102,30 +74,50 @@ export const stepsB: Step[] = [
 
         outcomes.push({
           id: 'russia.B.posture',
-          summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
+          summary: postureNote,
+          stateChanges: [{ label: 'Posture', from: String(posture), to: String(newPosture) }],
           mutations: [
             { kind: 'set', target: 'posture', amount: newPosture },
-            { kind: 'set', target: 'relationsBox', amount: relations },
-            { kind: 'set', target: 'soe', amount: soe },
           ],
         });
 
-        // Relations trending
-        let relationsNote = '';
+        // Relations trending — accumulator model
+        let newRelation: USRelation;
+        let relationsNote: string;
+
         if (sum <= 1) {
-          relationsNote = `Sum ≤ 1 → Place 1 "Trending Pro-US" counter on Russia Relations Track.`;
+          newRelation = applyTrendMarkers(currentRelation, 0, 1);
+          relationsNote = `Sum ≤ 1 → +1 Pro-US marker.`;
         } else {
-          const antiUSCounters = Math.floor(sum / 5);
-          if (antiUSCounters > 0) {
-            relationsNote = `Sum = ${sum} → Place ${antiUSCounters} "Trending Anti-US" counter(s) on Russia Relations Track. (Every 2 Trending Anti-US counters = −1 box on the Relations Track.)`;
+          const antiUSCount = Math.floor(sum / 5);
+          if (antiUSCount > 0) {
+            newRelation = applyTrendMarkers(currentRelation, antiUSCount, 0);
+            relationsNote = `Sum = ${sum} → +${antiUSCount} Anti-US marker(s).`;
           } else {
-            relationsNote = `Sum ${sum} (< 5) — No Relations shift.`;
+            newRelation = currentRelation;
+            relationsNote = `Sum ${sum} (< 5) — no Relations shift.`;
           }
+        }
+
+        if (newRelation.level !== currentRelation.level) {
+          relationsNote += ` Level: ${US_RELATION_LABELS[currentRelation.level]} → ${US_RELATION_LABELS[newRelation.level]}.`;
+        }
+        if (newRelation.pendingAntiUS > 0 || newRelation.pendingProUS > 0) {
+          const pending = newRelation.pendingAntiUS > 0
+            ? `${newRelation.pendingAntiUS} Anti-US pending`
+            : `${newRelation.pendingProUS} Pro-US pending`;
+          relationsNote += ` (${pending})`;
         }
 
         outcomes.push({
           id: 'russia.B.relations',
           summary: relationsNote,
+          stateChanges: newRelation.level !== currentRelation.level ? [
+            { label: 'US Relations', from: US_RELATION_LABELS[currentRelation.level], to: US_RELATION_LABELS[newRelation.level] },
+          ] : undefined,
+          mutations: [
+            { kind: 'set', target: 'usRelation', value: newRelation },
+          ],
         });
 
         // Tensions reset

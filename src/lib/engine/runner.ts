@@ -4,7 +4,6 @@ import type {
 } from '@/lib/procedures/types';
 import { executeRoll } from './drm';
 import { resolveResolution } from './resolver';
-import { saveSession, archiveSession, clearActiveSession } from './storage';
 
 // ─── Step list helpers ────────────────────────────────────────────────────────
 
@@ -155,7 +154,6 @@ export function resolveStep(
   };
 
   session.log.push(entry);
-  saveSession(session);
   return entry;
 }
 
@@ -182,18 +180,15 @@ export function skipStep(
   session.cursorRepeatIdx = 0;
   advance(session, procedure, steps, idx + 1);
 
-  saveSession(session);
   return entry;
 }
 
-/** Finish the session and archive it. */
+/** Mark the session as finished (persistence handled by the store). */
 export function finishSession(session: Session): void {
   if (!session.finishedAt) {
     session.finishedAt = new Date().toISOString();
   }
   session.cursorStepId = null;
-  archiveSession(session);
-  clearActiveSession(session.faction);
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────

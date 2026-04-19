@@ -1,4 +1,10 @@
 import type { Step } from '@/lib/procedures/types';
+import {
+  US_RELATION_LABELS,
+  DEFAULT_US_RELATION,
+  applyTrendMarkers,
+  type USRelation,
+} from '@/lib/procedures/usRelation';
 
 // Section B — Posture Changes & Relationship with US (China)
 // Same mechanic as Russia, but "Look Over There!" impetus triggers at SoE 3 or 4 (Russia = 3 only).
@@ -10,15 +16,6 @@ export const stepsB: Step[] = [
     title: 'Posture Changes & Relationship with US',
     help: 'Flip all Tensions counters on China, sum their values, then resolve posture changes and relations shifts. Remove all Tensions; redraw half (round up), place face-down.',
     inputs: [
-      {
-        id: 'posture',
-        kind: 'enum',
-        label: 'China current Posture',
-        options: [
-          { value: '1', label: 'Posture 1 (passive)' },
-          { value: '2', label: 'Posture 2 (aggressive)' },
-        ],
-      },
       {
         id: 'tensionsSum',
         kind: 'int',
@@ -32,40 +29,16 @@ export const stepsB: Step[] = [
         label: 'Total number of Tensions counters on China (before removal)',
         min: 0,
       },
-      {
-        id: 'relationsBox',
-        kind: 'enum',
-        label: 'China/US Relations Track box',
-        options: [
-          { value: '1', label: '1 — Estranged' },
-          { value: '2', label: '2' },
-          { value: '3', label: '3' },
-          { value: '4', label: '4' },
-          { value: '5', label: '5 — Very Close' },
-        ],
-      },
-      {
-        id: 'soe',
-        kind: 'enum',
-        label: 'China State of the Economy (SoE)',
-        options: [
-          { value: '3', label: '3 — Recession' },
-          { value: '4', label: '4 — Stagnation' },
-          { value: '5', label: '5 — Recovery' },
-          { value: '6', label: '6 — Peak Performance' },
-          { value: '7', label: '7 — Peak Performance' },
-        ],
-        help: 'SoE = 3 or 4 triggers "Look Over There!" impetus (Posture 1 → 2).',
-      },
     ],
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const posture = Number(ctx.inputs.posture);
+        const posture = Number(ctx.sharedState['posture'] ?? 1);
         const sum = Number(ctx.inputs.tensionsSum);
         const count = Number(ctx.inputs.tensionsCount);
-        const relations = Number(ctx.inputs.relationsBox);
-        const soe = Number(ctx.inputs.soe);
+        const soe = Number(ctx.sharedState['soe'] ?? 5);
+        const currentRelation = (ctx.sharedState['usRelation'] as USRelation | undefined) ?? DEFAULT_US_RELATION;
+        const relations = currentRelation.level;
         const outcomes = [];
 
         let newPosture = posture;
@@ -96,27 +69,51 @@ export const stepsB: Step[] = [
 
         outcomes.push({
           id: 'china.B.posture',
-          summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
+          summary: postureNote,
+          stateChanges: [{ label: 'Posture', from: String(posture), to: String(newPosture) }],
           mutations: [
             { kind: 'set' as const, target: 'posture', amount: newPosture },
-            { kind: 'set' as const, target: 'relationsBox', amount: relations },
-            { kind: 'set' as const, target: 'soe', amount: soe },
           ],
         });
 
-        let relationsNote = '';
+        // Relations trending — accumulator model
+        let newRelation: USRelation;
+        let relationsNote: string;
+
         if (sum <= 1) {
-          relationsNote = 'Sum ≤ 1 → Place 1 "Trending Pro-US" counter on China Relations Track.';
+          newRelation = applyTrendMarkers(currentRelation, 0, 1);
+          relationsNote = 'Sum ≤ 1 → +1 Pro-US marker.';
         } else {
-          const antiUS = Math.floor(sum / 5);
-          if (antiUS > 0) {
-            relationsNote = `Sum = ${sum} → Place ${antiUS} "Trending Anti-US" counter(s) on China Relations Track.`;
+          const antiUSCount = Math.floor(sum / 5);
+          if (antiUSCount > 0) {
+            newRelation = applyTrendMarkers(currentRelation, antiUSCount, 0);
+            relationsNote = `Sum = ${sum} → +${antiUSCount} Anti-US marker(s).`;
           } else {
-            relationsNote = `Sum ${sum} (< 5) — No Relations shift.`;
+            newRelation = currentRelation;
+            relationsNote = `Sum ${sum} (< 5) — no Relations shift.`;
           }
         }
 
-        outcomes.push({ id: 'china.B.relations', summary: relationsNote });
+        if (newRelation.level !== currentRelation.level) {
+          relationsNote += ` Level: ${US_RELATION_LABELS[currentRelation.level]} → ${US_RELATION_LABELS[newRelation.level]}.`;
+        }
+        if (newRelation.pendingAntiUS > 0 || newRelation.pendingProUS > 0) {
+          const pending = newRelation.pendingAntiUS > 0
+            ? `${newRelation.pendingAntiUS} Anti-US pending`
+            : `${newRelation.pendingProUS} Pro-US pending`;
+          relationsNote += ` (${pending})`;
+        }
+
+        outcomes.push({
+          id: 'china.B.relations',
+          summary: relationsNote,
+          stateChanges: newRelation.level !== currentRelation.level ? [
+            { label: 'US Relations', from: US_RELATION_LABELS[currentRelation.level], to: US_RELATION_LABELS[newRelation.level] },
+          ] : undefined,
+          mutations: [
+            { kind: 'set' as const, target: 'usRelation', value: newRelation },
+          ],
+        });
 
         const redrawn = Math.ceil(count / 2);
         outcomes.push({

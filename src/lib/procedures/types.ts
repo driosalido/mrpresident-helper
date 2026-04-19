@@ -59,13 +59,21 @@ export interface Mutation {
   value?: unknown;
 }
 
-import type { CapabilityTracks } from '@/lib/procedures/capabilities';
+import type { CapabilityKey, CapabilityTracks } from '@/lib/procedures/capabilities';
+import type { USRelation } from '@/lib/procedures/usRelation';
+
+export interface StateChange {
+  label: string;
+  from: string;
+  to: string;
+}
 
 export interface Outcome {
   id: string;
   summary: string;
   detail?: string;
   mutations?: Mutation[];
+  stateChanges?: StateChange[];
   consumesAction?: boolean; // default true inside section H
   boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks; faction: Faction };
   hidden?: boolean; // suppress card display; mutations still apply
@@ -139,6 +147,30 @@ export interface LogEntry {
   inputs?: Inputs;
   rolls?: DiceResult[];
   outcomes: Outcome[];
+}
+
+// ─── Game ─────────────────────────────────────────────────────────────────────
+
+export interface GameSharedState {
+  capabilityTracks: {
+    russia: Record<CapabilityKey, number>;
+    china:  Record<CapabilityKey, number>;
+    us:     Record<CapabilityKey, number>;
+  };
+  usRelation: {
+    russia: USRelation;
+    china:  USRelation;
+  };
+}
+
+export interface Game {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  sharedState: GameSharedState;
+  activeRuns: Partial<Record<Faction, Session>>;
+  archive: Session[];
 }
 
 // ─── Runtime context ──────────────────────────────────────────────────────────
