@@ -1,19 +1,21 @@
 'use client';
 
-import type { InputSpec } from '@/lib/procedures/types';
+import type { InputSpec, Inputs } from '@/lib/procedures/types';
 
 interface Props {
   spec: InputSpec;
   value: string | number | boolean;
+  allValues?: Inputs;
   onChange: (id: string, value: string | number | boolean) => void;
 }
 
-export function InputField({ spec, value, onChange }: Props) {
+export function InputField({ spec, value, allValues, onChange }: Props) {
+  const help = spec.kind !== 'capRow' ? spec.help : undefined;
   const baseLabel = (
     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
       {spec.label}
-      {spec.help && (
-        <span className="ml-1 text-xs text-gray-400 font-normal">({spec.help})</span>
+      {help && (
+        <span className="ml-1 text-xs text-gray-400 font-normal">({help})</span>
       )}
     </label>
   );
@@ -70,6 +72,39 @@ export function InputField({ spec, value, onChange }: Props) {
               {opt.label}
             </label>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (spec.kind === 'capRow') {
+    const min = spec.min ?? 1;
+    const max = spec.max ?? 7;
+    const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+    const factionVal = Number(allValues?.[spec.factionId] ?? min);
+    const usVal      = Number(allValues?.[spec.usId]      ?? min);
+    return (
+      <div className="flex items-center gap-3 py-1">
+        <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{spec.label}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-400 w-12 text-right">Faction</span>
+          <select
+            value={factionVal}
+            onChange={(e) => onChange(spec.factionId, Number(e.target.value))}
+            className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1.5 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {options.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-400 w-6 text-right">US</span>
+          <select
+            value={usVal}
+            onChange={(e) => onChange(spec.usId, Number(e.target.value))}
+            className="rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1.5 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {options.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
         </div>
       </div>
     );

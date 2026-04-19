@@ -25,6 +25,10 @@ function defaultInputs(step: Step): Inputs {
     if (spec.kind === 'int') defaults[spec.id] = spec.min ?? 0;
     else if (spec.kind === 'bool') defaults[spec.id] = false;
     else if (spec.kind === 'enum' || spec.kind === 'choice') defaults[spec.id] = spec.options[0]?.value ?? '';
+    else if (spec.kind === 'capRow') {
+      defaults[spec.factionId] = spec.min ?? 1;
+      defaults[spec.usId] = spec.min ?? 1;
+    }
   }
   return defaults;
 }
@@ -180,6 +184,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
               key={spec.id}
               spec={spec}
               value={inputs[spec.id] ?? ''}
+              allValues={inputs}
               onChange={handleChange}
             />
           ))}

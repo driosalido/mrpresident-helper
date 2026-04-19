@@ -11,7 +11,8 @@ export type InputSpec =
   | { id: string; kind: 'enum'; label: string; options: { value: string; label: string }[]; help?: string }
   | { id: string; kind: 'int'; label: string; min?: number; max?: number; help?: string }
   | { id: string; kind: 'bool'; label: string; help?: string }
-  | { id: string; kind: 'choice'; label: string; options: { value: string; label: string }[]; help?: string };
+  | { id: string; kind: 'choice'; label: string; options: { value: string; label: string }[]; help?: string }
+  | { id: string; kind: 'capRow'; label: string; factionId: string; usId: string; min?: number; max?: number };
 
 export type Inputs = Record<string, string | number | boolean>;
 

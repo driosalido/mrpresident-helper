@@ -264,14 +264,12 @@ describe('runner', () => {
     for (const k of ['airForce', 'groundForces', 'navalForces', 'cyber', 'space', 'strategicMissiles', 'recon']) {
       inputs[`faction_${k}`] = 3;
       inputs[`us_${k}`] = 4;
-      inputs[`sanctions_${k}`] = false;
     }
     resolveStep(session, proc, inputs);
     const tracks = session.sharedState['capabilityTracks'] as CapabilityTracks;
     expect(tracks).toBeDefined();
     expect(tracks.faction.cyber).toBe(3);
     expect(tracks.us.cyber).toBe(4);
-    expect(tracks.sanctions.cyber).toBe(false);
   });
 });
 
@@ -334,9 +332,8 @@ describe('Russia Step C — selection priority', () => {
   function makeTracks(overrides: Partial<CapabilityTracks> = {}): CapabilityTracks {
     const base = { airForce: 4, groundForces: 4, navalForces: 4, cyber: 4, space: 4, strategicMissiles: 4, recon: 4 };
     return {
-      faction:   { ...base, ...overrides.faction },
-      us:        { ...base, ...overrides.us },
-      sanctions: { airForce: false, groundForces: false, navalForces: false, cyber: false, space: false, strategicMissiles: false, recon: false, ...overrides.sanctions },
+      faction: { ...base, ...overrides.faction },
+      us:      { ...base, ...overrides.us },
     };
   }
 

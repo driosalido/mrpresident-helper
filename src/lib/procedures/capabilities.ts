@@ -18,7 +18,6 @@ export const CAPABILITY_LABELS: Record<CapabilityKey, string> = {
 export interface CapabilityTracks {
   faction: Record<CapabilityKey, number>;   // 1–7
   us:      Record<CapabilityKey, number>;   // 1–7
-  sanctions: Record<CapabilityKey, boolean>;
 }
 
 /** Priority-3 d10 selection table (1–10). */

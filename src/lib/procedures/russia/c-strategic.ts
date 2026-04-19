@@ -18,8 +18,17 @@ export const stepsC: Step[] = [
     id: 'russia.C',
     section: 'C',
     title: 'Improve Strategic Capabilities',
-    help: 'Russia makes 2 attempts (Posture 1) or 3 (Posture 2). Selection priority: (1) lag ≥ 2 vs US → (2) Cyber + Strategic Missiles → (3) d10 table. Roll d10 per attempt; +1 if Sanctions marker on that track. Success ≤ 4 (P1) or ≤ 5 (P2).',
-    inputs: [],
+    help: 'Russia makes 2 attempts (Posture 1) or 3 (Posture 2). Selection priority: (1) lag ≥ 2 vs US → (2) Cyber + Strategic Missiles → (3) d10 table. Roll d10 per attempt. Success ≤ 4 (P1) or ≤ 5 (P2).',
+    inputs: [
+      {
+        id: 'sanctionsCount',
+        kind: 'int',
+        label: 'Sanctions counters on Russia',
+        min: 0,
+        max: 5,
+        help: '+1 DRM per counter to every improvement roll (harder to succeed)',
+      },
+    ],
     dice: [
       { id: 'sel0', kind: 'd10', label: 'Selection die — attempt 1' },
       { id: 'sel1', kind: 'd10', label: 'Selection die — attempt 2' },
@@ -34,6 +43,7 @@ export const stepsC: Step[] = [
         const posture = String(ctx.sharedState['posture'] ?? '1');
         const attempts = posture === '2' ? 3 : 2;
         const threshold = posture === '2' ? 5 : 4;
+        const sanctions = Number(ctx.inputs.sanctionsCount ?? 0);
 
         const tracksRaw = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
         if (!tracksRaw) {
@@ -44,9 +54,8 @@ export const stepsC: Step[] = [
         }
 
         const tracks: CapabilityTracks = {
-          faction:   { ...tracksRaw.faction },
-          us:        { ...tracksRaw.us },
-          sanctions: { ...tracksRaw.sanctions },
+          faction: { ...tracksRaw.faction },
+          us:      { ...tracksRaw.us },
         };
 
         const improved = new Set<CapabilityKey>();
@@ -96,12 +105,10 @@ export const stepsC: Step[] = [
             }
           }
 
-          // Improvement roll
-          const sanctions = tracks.sanctions[target] ? 1 : 0;
-          const modified = impRoll + sanctions;
+          // Improvement roll (+sanctions DRM)
           const label = CAPABILITY_LABELS[target];
-          const sanctionsNote = sanctions ? ' +1 (sanctions marker)' : '';
-
+          const modified = impRoll + sanctions;
+          const sanctionsNote = sanctions > 0 ? ` +${sanctions} (sanctions)` : '';
           improved.add(target);
 
           if (modified <= threshold) {
