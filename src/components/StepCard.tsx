@@ -100,6 +100,10 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
       : '';
     const result = onResolve(inputs);
     if (result) {
+      if (section === 'SETUP') {
+        onNext();
+        return;
+      }
       setResolvedEntry(result);
       setResolvedTitle(title);
       setResolvedSection(section);
