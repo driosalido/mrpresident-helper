@@ -46,11 +46,16 @@ export const stepsB: Step[] = [
       },
       {
         id: 'soe',
-        kind: 'int',
+        kind: 'enum',
         label: 'China State of the Economy (SoE)',
-        min: 1,
-        max: 7,
-        help: '"Look Over There!" impetus check: SoE = 3 or 4 (not 5+) triggers Posture 1 → 2.',
+        options: [
+          { value: '3', label: '3 — Recession' },
+          { value: '4', label: '4 — Stagnation' },
+          { value: '5', label: '5 — Recovery' },
+          { value: '6', label: '6 — Peak Performance' },
+          { value: '7', label: '7 — Peak Performance' },
+        ],
+        help: 'SoE = 3 or 4 triggers "Look Over There!" impetus (Posture 1 → 2).',
       },
     ],
     resolution: {
@@ -92,7 +97,11 @@ export const stepsB: Step[] = [
         outcomes.push({
           id: 'china.B.posture',
           summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
-          mutations: [{ kind: 'set' as const, target: 'posture', amount: newPosture }],
+          mutations: [
+            { kind: 'set' as const, target: 'posture', amount: newPosture },
+            { kind: 'set' as const, target: 'relationsBox', amount: relations },
+            { kind: 'set' as const, target: 'soe', amount: soe },
+          ],
         });
 
         let relationsNote = '';

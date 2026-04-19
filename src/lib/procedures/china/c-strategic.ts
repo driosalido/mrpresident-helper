@@ -22,15 +22,6 @@ export const stepsC: Step[] = [
     help: '2 attempts (Posture 1) or 3 attempts (Posture 2). Roll d10 +1 per Sanctions. Success ≤ 4 (P1) or ≤ 5 (P2). Priority: trailing areas → Cyber + Naval → random.',
     inputs: [
       {
-        id: 'posture',
-        kind: 'enum',
-        label: 'China current Posture (after Section B)',
-        options: [
-          { value: '1', label: 'Posture 1' },
-          { value: '2', label: 'Posture 2' },
-        ],
-      },
-      {
         id: 'sanctionsCount',
         kind: 'int',
         label: 'Sanctions counters on China',
@@ -47,7 +38,7 @@ export const stepsC: Step[] = [
       },
     ],
     repeat: {
-      count: (ctx) => (String(ctx.inputs.posture) === '2' ? 3 : 2),
+      count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 3 : 2),
       label: 'Capability Attempt',
     },
     dice: [
@@ -67,7 +58,7 @@ export const stepsC: Step[] = [
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const threshold = String(ctx.inputs.posture) === '2' ? 5 : 4;
+        const threshold = String(ctx.sharedState['posture'] ?? '1') === '2' ? 5 : 4;
         const capability = String(ctx.inputs.targetCapability);
         const roll = ctx.dice['stratRoll'];
         if (roll.modified <= threshold) {

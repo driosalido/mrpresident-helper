@@ -51,29 +51,15 @@ export const stepsG: Step[] = [
     section: 'G',
     title: 'G2 — Quell Rising Internal Dissent',
     help: 'Roll d10 (+1 if Posture 2, −1 if SoE ≥ 6). 1–4 = spend 1 Action, no effect. 5+ = no cost.',
-    inputs: [
-      {
-        id: 'posture',
-        kind: 'enum',
-        label: 'China current Posture',
-        options: [{ value: '1', label: 'Posture 1' }, { value: '2', label: 'Posture 2' }],
-      },
-      {
-        id: 'soe',
-        kind: 'int',
-        label: 'China SoE (−1 DRM if ≥ 6)',
-        min: 1,
-        max: 7,
-      },
-    ],
+    inputs: [],
     dice: [
       {
         id: 'dissentRoll',
         kind: 'd10',
         label: 'Dissent roll',
         drms: [
-          { label: 'Posture 2 (+1)', value: (ctx) => (String(ctx.inputs.posture) === '2' ? 1 : 0) },
-          { label: 'SoE ≥ 6 (−1)', value: (ctx) => (Number(ctx.inputs.soe) >= 6 ? -1 : 0) },
+          { label: 'Posture 2 (+1)', value: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 1 : 0) },
+          { label: 'SoE ≥ 6 (−1)', value: (ctx) => (Number(ctx.sharedState['soe'] ?? 4) >= 6 ? -1 : 0) },
         ],
         cap: { min: -1, max: 3 },
       },
@@ -143,7 +129,6 @@ export const stepsG: Step[] = [
     help: 'Free removal if Relations 4–5 OR ≥6 of 8 regions have ≥1 China Influence. Otherwise costs 1 (Relations 2–3) or 2 (Relations 1) Actions.',
     inputs: [
       { id: 'sanctionsExist', kind: 'bool', label: 'Are there Sanctions counters on China?' },
-      { id: 'relationsBox', kind: 'int', label: 'China/US Relations box (1–5)', min: 1, max: 5 },
       { id: 'regionsWithInfluence', kind: 'int', label: 'Number of world regions (out of 8) with at least 1 China Influence', min: 0, max: 8 },
       { id: 'hasMultilateral', kind: 'bool', label: 'Is there a Multilateral Sanctions counter on China?' },
     ],
@@ -153,7 +138,7 @@ export const stepsG: Step[] = [
         if (!(ctx.inputs.sanctionsExist === true || ctx.inputs.sanctionsExist === 'true')) {
           return { id: 'china.G4.none', summary: 'No Sanctions on China — G4 skipped.', consumesAction: false };
         }
-        const relations = Number(ctx.inputs.relationsBox);
+        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
         const regions = Number(ctx.inputs.regionsWithInfluence);
         const multilateral = ctx.inputs.hasMultilateral === true || ctx.inputs.hasMultilateral === 'true';
 
@@ -194,7 +179,6 @@ export const stepsG: Step[] = [
     help: 'If China is at War, make a China SoE Check (D18). If pass, spend 1 Action for an immediate War Progress roll for a random China War.',
     inputs: [
       { id: 'chinaAtWar', kind: 'bool', label: 'Is China currently at War?' },
-      { id: 'soe', kind: 'int', label: 'China SoE (used for D18 SoE Check)', min: 1, max: 7 },
     ],
     dice: [
       { id: 'd18a', kind: 'd10', label: 'D18 die 1' },
@@ -211,7 +195,7 @@ export const stepsG: Step[] = [
         const die1 = ctx.dice['d18a'].sum;
         const die2 = ctx.dice['d18b'].sum;
         const total = die1 + die2;
-        const soe = Number(ctx.inputs.soe);
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
 
         // D18 SoE Check: pass if total ≤ SoE (exact rules in Governing Manual; standard interpretation)
         const pass = total <= soe;

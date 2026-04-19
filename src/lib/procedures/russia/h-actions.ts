@@ -53,15 +53,6 @@ export const stepsH: Step[] = [
     inputs: [
       ...triggered('Does H1 trigger? (Always yes — H1 is always attempted first)'),
       {
-        id: 'posture',
-        kind: 'enum',
-        label: 'Russia current Posture',
-        options: [
-          { value: '1', label: 'Posture 1 (2 attacks)' },
-          { value: '2', label: 'Posture 2 (3 attacks)' },
-        ],
-      },
-      {
         id: 'cyberAdv',
         kind: 'enum',
         label: 'Russia Cyber Warfare vs US Cyber Warfare',
@@ -73,7 +64,7 @@ export const stepsH: Step[] = [
       },
     ],
     repeat: {
-      count: (ctx) => (String(ctx.inputs.posture) === '2' ? 3 : 2),
+      count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 3 : 2),
       label: 'Cyber Attack',
     },
     dice: [
@@ -154,14 +145,6 @@ export const stepsH: Step[] = [
         max: 10,
         help: 'Higher alignment = harder for Russia to expand.',
       },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'Russia/US Relations box (1–5)',
-        min: 1,
-        max: 5,
-        help: 'Needed to check if Trending Anti-US should also be placed on Alignment Track.',
-      },
     ],
     dice: [
       {
@@ -211,7 +194,7 @@ export const stepsH: Step[] = [
 
         const roll = ctx.dice['h2Roll'];
         const regionName = { ee: 'Eastern Europe', eurozone: 'Eurozone', csa: 'Central/South Asia' }[region];
-        const relations = Number(ctx.inputs.relationsBox);
+        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
 
         if (roll.modified <= 10) {
           const outcomes: Outcome[] = [
@@ -265,19 +248,6 @@ export const stepsH: Step[] = [
         label: 'Are there Sanctions counters on Russia?',
       },
       {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'Russia/US Relations box (1–5)',
-        min: 1,
-        max: 5,
-      },
-      {
-        id: 'posture',
-        kind: 'enum',
-        label: 'Russia Posture',
-        options: [{ value: '1', label: '1' }, { value: '2', label: '2' }],
-      },
-      {
         id: 'russiaStrategicAdvantage',
         kind: 'bool',
         label: 'Russia Strategic Missiles/Missile Defense ≥ 2 boxes higher than US? (−2 DRM)',
@@ -319,7 +289,7 @@ export const stepsH: Step[] = [
         kind: 'd10',
         label: 'Sanctions compromise roll',
         drms: [
-          { label: 'Posture 2 (−1)', value: (ctx) => (String(ctx.inputs.posture) === '2' ? -1 : 0) },
+          { label: 'Posture 2 (−1)', value: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? -1 : 0) },
           { label: 'Russia Missile adv (−2)', value: (ctx) => (ctx.inputs.russiaStrategicAdvantage === true || ctx.inputs.russiaStrategicAdvantage === 'true' ? -2 : 0) },
           { label: 'Russia Conflict Track +2 (−2)', value: (ctx) => (ctx.inputs.russiaConflictAdvantage === true || ctx.inputs.russiaConflictAdvantage === 'true' ? -2 : 0) },
           { label: 'EE Stability ≥6 (+1)', value: (ctx) => (ctx.inputs.eeStability6 === true || ctx.inputs.eeStability6 === 'true' ? 1 : 0) },
@@ -341,7 +311,7 @@ export const stepsH: Step[] = [
         if (!sanctions) {
           return { id: 'russia.H3.nosanctions', summary: 'No Sanctions on Russia — H3 has no effect.', consumesAction: false };
         }
-        const relations = Number(ctx.inputs.relationsBox);
+        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
         if (relations >= 4) {
           return {
             id: 'russia.H3.free',
@@ -462,13 +432,6 @@ export const stepsH: Step[] = [
           { value: 'none', label: 'Neither condition met — skip' },
         ],
       },
-      {
-        id: 'soe',
-        kind: 'int',
-        label: 'Russia SoE (used for option A build roll)',
-        min: 1,
-        max: 7,
-      },
     ],
     dice: [{ id: 'h5Roll', kind: 'd10', label: 'H5 action roll' }],
     resolution: {
@@ -484,7 +447,7 @@ export const stepsH: Step[] = [
 
         const roll = ctx.dice['h5Roll'];
         const m = roll.modified;
-        const soe = Number(ctx.inputs.soe);
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
 
         if (opt === 'a') {
           // roll d10 − 2; if result < current Russia SoE → improve
@@ -517,7 +480,7 @@ export const stepsH: Step[] = [
         }
 
         // b_other — resupply
-        const adjustedResupply = m + (String(ctx.inputs.posture ?? '1') === '2' ? -1 : 0);
+        const adjustedResupply = m + (String(ctx.sharedState['posture'] ?? '1') === '2' ? -1 : 0);
         if (adjustedResupply <= 6) {
           return {
             id: 'russia.H5.b.resupply',
@@ -717,13 +680,6 @@ export const stepsH: Step[] = [
     inputs: [
       ...triggered(),
       {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'Russia/US Relations box (1–5) — skip if 4 or 5',
-        min: 1,
-        max: 5,
-      },
-      {
         id: 'h10Path',
         kind: 'enum',
         label: 'Russia Relative Strength vs NATO',
@@ -748,7 +704,7 @@ export const stepsH: Step[] = [
           {
             label: 'Relations box modifier',
             value: (ctx) => {
-              const r = Number(ctx.inputs.relationsBox);
+              const r = Number(ctx.sharedState['relationsBox'] ?? 3);
               return [0, -2, -1, 0, 1, 2][r] ?? 0;
             },
           },
@@ -766,7 +722,7 @@ export const stepsH: Step[] = [
         if (String(ctx.inputs.triggered) === 'no') {
           return { id: 'russia.H10.skip', summary: 'H10 skipped.', consumesAction: false };
         }
-        const relations = Number(ctx.inputs.relationsBox);
+        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
         if (relations >= 4) {
           return { id: 'russia.H10.peacetime', summary: 'Relations 4–5 — H10 does not trigger.', consumesAction: false };
         }

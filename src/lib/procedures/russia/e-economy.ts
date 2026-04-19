@@ -13,13 +13,6 @@ export const stepsE: Step[] = [
     guard: (ctx) => Number(ctx.sharedState['soe'] ?? 4) < 7,
     inputs: [
       {
-        id: 'currentSoE',
-        kind: 'int',
-        label: 'Russia SoE (skip this section if 7)',
-        min: 1,
-        max: 7,
-      },
-      {
         id: 'unilateralSanctions',
         kind: 'bool',
         label: 'Unilateral Sanctions on Russia? (+1 DRM)',
@@ -46,13 +39,6 @@ export const stepsE: Step[] = [
         kind: 'int',
         label: 'Russia Influence in Central/South Asia (−1 DRM each)',
         min: 0,
-      },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'Russia/US Relations box (−1 DRM if 5)',
-        min: 1,
-        max: 5,
       },
     ],
     dice: [
@@ -85,7 +71,7 @@ export const stepsE: Step[] = [
           },
           {
             label: 'Relations = 5 (−1)',
-            value: (ctx) => (Number(ctx.inputs.relationsBox) === 5 ? -1 : 0),
+            value: (ctx) => (Number(ctx.sharedState['relationsBox'] ?? 3) === 5 ? -1 : 0),
           },
         ],
         cap: { min: -3, max: 3 },
@@ -94,7 +80,7 @@ export const stepsE: Step[] = [
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const soe = Number(ctx.inputs.currentSoE);
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
         if (soe >= 7) {
           return { id: 'russia.E.maxed', summary: 'Russia SoE = 7 — skip this section.' };
         }

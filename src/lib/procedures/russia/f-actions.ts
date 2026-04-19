@@ -20,21 +20,6 @@ export const stepsF: Step[] = [
     help: 'Actions = SoE + Relations-box modifier + AP counters − 1 (if economy worsened in E). Minimum 0.',
     inputs: [
       {
-        id: 'soe',
-        kind: 'int',
-        label: 'Russia SoE value',
-        min: 1,
-        max: 7,
-      },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'Russia/US Relations Track box (1–5)',
-        min: 1,
-        max: 5,
-        help: 'Box 1 = −2, Box 2 = −1, Box 3 = 0, Box 4 = +1, Box 5 = +2',
-      },
-      {
         id: 'plusAPCounters',
         kind: 'int',
         label: '+1 AP counters on Russia',
@@ -46,21 +31,15 @@ export const stepsF: Step[] = [
         label: '−1 AP counters on Russia',
         min: 0,
       },
-      {
-        id: 'economyWorsened',
-        kind: 'bool',
-        label: 'Did Section E produce "Worsening Economy"? (−1 action)',
-      },
     ],
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const soe = Number(ctx.inputs.soe);
-        const relMod = relationsModifier[Number(ctx.inputs.relationsBox)] ?? 0;
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
+        const relMod = relationsModifier[Number(ctx.sharedState['relationsBox'] ?? 3)] ?? 0;
         const plus = Number(ctx.inputs.plusAPCounters);
         const minus = Number(ctx.inputs.minusAPCounters);
-        const worsened =
-          ctx.inputs.economyWorsened === true || ctx.inputs.economyWorsened === 'true' ? 1 : 0;
+        const worsened = ctx.sharedState['worseningEconomy'] === 1 ? 1 : 0;
 
         const total = Math.max(0, soe + relMod + plus - minus - worsened);
 
