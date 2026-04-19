@@ -43,6 +43,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# git worktrees
+.worktrees/
+
 # override global gitignore which excludes lib/ directories
 !src/lib/
 !src/lib/**
