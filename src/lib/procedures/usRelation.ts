@@ -1,9 +1,9 @@
 export type USRelationLevel = 1 | 2 | 3 | 4 | 5;
-export type USRelationTrend = 'antiUS' | 'none' | 'proUS';
 
 export interface USRelation {
   level: USRelationLevel;
-  trend: USRelationTrend;
+  pendingAntiUS: number;
+  pendingProUS: number;
 }
 
 export const US_RELATION_LABELS: Record<USRelationLevel, string> = {
@@ -14,16 +14,28 @@ export const US_RELATION_LABELS: Record<USRelationLevel, string> = {
   5: 'Friends & Partners',
 };
 
-export const US_RELATION_TREND_LABEL: Record<USRelationTrend, string> = {
-  antiUS: 'Anti-US Trend',
-  none:   '',
-  proUS:  'Pro-US Trend',
-};
+export const DEFAULT_US_RELATION: USRelation = { level: 3, pendingAntiUS: 0, pendingProUS: 0 };
 
-export const US_RELATION_TREND_SYMBOL: Record<USRelationTrend, string> = {
-  antiUS: '↓',
-  none:   '',
-  proUS:  '↑',
-};
+/**
+ * Apply accumulated trend markers to a USRelation.
+ * Every 2 anti-US markers reduce the level by 1; every 2 pro-US markers raise it.
+ */
+export function applyTrendMarkers(
+  rel: USRelation,
+  addAntiUS: number,
+  addProUS: number,
+): USRelation {
+  let antiUS = rel.pendingAntiUS + addAntiUS;
+  let proUS = rel.pendingProUS + addProUS;
+  let level = rel.level as number;
 
-export const DEFAULT_US_RELATION: USRelation = { level: 3, trend: 'none' };
+  const antiPairs = Math.floor(antiUS / 2);
+  antiUS = antiUS % 2;
+  level = Math.max(1, level - antiPairs);
+
+  const proPairs = Math.floor(proUS / 2);
+  proUS = proUS % 2;
+  level = Math.min(5, level + proPairs);
+
+  return { level: level as USRelationLevel, pendingAntiUS: antiUS, pendingProUS: proUS };
+}

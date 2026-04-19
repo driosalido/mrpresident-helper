@@ -1,7 +1,7 @@
 import type { Step } from '@/lib/procedures/types';
 import { CAPABILITY_KEYS, CAPABILITY_LABELS } from '@/lib/procedures/capabilities';
 import type { CapabilityTracks, CapabilityKey } from '@/lib/procedures/capabilities';
-import { US_RELATION_LABELS, type USRelationLevel, type USRelationTrend } from '@/lib/procedures/usRelation';
+import { US_RELATION_LABELS, type USRelationLevel } from '@/lib/procedures/usRelation';
 
 export const stepsSetup: Step[] = [
   {
@@ -50,14 +50,16 @@ export const stepsSetup: Step[] = [
           tracks.faction[k] = Number(ctx.inputs[`faction_${k}`] ?? 1);
           tracks.us[k]      = Number(ctx.inputs[`us_${k}`]      ?? 1);
         }
-        const level   = Number(ctx.inputs['usRelationLevel'] ?? 3) as USRelationLevel;
-        const trend   = (ctx.inputs['usRelationTrend'] ?? 'none') as USRelationTrend;
+        const level = Number(ctx.inputs['usRelationLevel'] ?? 3) as USRelationLevel;
+        const trendInput = String(ctx.inputs['usRelationTrend'] ?? 'none');
+        const pendingAntiUS = trendInput === 'antiUS' ? 1 : 0;
+        const pendingProUS  = trendInput === 'proUS'  ? 1 : 0;
         return {
           id: 'russia.SETUP.done',
           summary: `Capability tracks and US Relation recorded (${US_RELATION_LABELS[level]}).`,
           mutations: [
             { kind: 'set', target: 'capabilityTracks', value: tracks },
-            { kind: 'set', target: 'usRelation',        value: { level, trend } },
+            { kind: 'set', target: 'usRelation', value: { level, pendingAntiUS, pendingProUS } },
           ],
         };
       },

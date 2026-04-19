@@ -11,7 +11,6 @@ import { SessionLogPane } from '@/components/SessionLogPane';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   US_RELATION_LABELS,
-  US_RELATION_TREND_SYMBOL,
   type USRelation,
 } from '@/lib/procedures/usRelation';
 
@@ -115,9 +114,14 @@ export default function WizardPage({ params, searchParams }: {
             {usRelation && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-medium">
                 US: {US_RELATION_LABELS[usRelation.level]}
-                {usRelation.trend !== 'none' && (
-                  <span className={usRelation.trend === 'proUS' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}>
-                    {US_RELATION_TREND_SYMBOL[usRelation.trend]}
+                {usRelation.pendingAntiUS > 0 && (
+                  <span className="text-red-500 dark:text-red-400">
+                    ↓{usRelation.pendingAntiUS > 1 ? `×${usRelation.pendingAntiUS}` : ''}
+                  </span>
+                )}
+                {usRelation.pendingProUS > 0 && (
+                  <span className="text-green-600 dark:text-green-400">
+                    ↑{usRelation.pendingProUS > 1 ? `×${usRelation.pendingProUS}` : ''}
                   </span>
                 )}
               </span>

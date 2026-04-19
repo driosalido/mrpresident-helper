@@ -199,24 +199,36 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
         <div className="space-y-1 border-t border-gray-100 dark:border-gray-800 pt-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Board State</p>
           {step.section === 'SETUP' ? (
-            <CapabilityTrackBoard
-              faction={faction}
-              tracks={(() => {
-                const f: Record<string, number> = {};
-                const u: Record<string, number> = {};
-                for (const k of CAPABILITY_KEYS) {
-                  f[k] = Number(inputs[`faction_${k}`] ?? 1);
-                  u[k] = Number(inputs[`us_${k}`] ?? 1);
-                }
-                return { faction: f, us: u } as CapabilityTracks;
-              })()}
-              onChange={(next) => {
-                for (const k of CAPABILITY_KEYS) {
-                  handleChange(`faction_${k}`, next.faction[k]);
-                  handleChange(`us_${k}`, next.us[k]);
-                }
-              }}
-            />
+            <>
+              <CapabilityTrackBoard
+                faction={faction}
+                tracks={(() => {
+                  const f: Record<string, number> = {};
+                  const u: Record<string, number> = {};
+                  for (const k of CAPABILITY_KEYS) {
+                    f[k] = Number(inputs[`faction_${k}`] ?? 1);
+                    u[k] = Number(inputs[`us_${k}`] ?? 1);
+                  }
+                  return { faction: f, us: u } as CapabilityTracks;
+                })()}
+                onChange={(next) => {
+                  for (const k of CAPABILITY_KEYS) {
+                    handleChange(`faction_${k}`, next.faction[k]);
+                    handleChange(`us_${k}`, next.us[k]);
+                  }
+                }}
+              />
+              {step.inputs!.filter((s) => s.kind !== 'capRow').map((spec) => (
+                <div key={spec.id} className="mt-4">
+                  <InputField
+                    spec={spec}
+                    value={inputs[spec.id] ?? ''}
+                    allValues={inputs}
+                    onChange={handleChange}
+                  />
+                </div>
+              ))}
+            </>
           ) : (
             step.inputs!.map((spec) => (
               <InputField
