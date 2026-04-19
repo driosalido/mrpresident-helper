@@ -1,0 +1,145 @@
+import type { Step } from '@/lib/procedures/types';
+
+// Section D — Espionage (China)
+// Same DRM table as Russia. 12+ branch: remove Influence from A/P and C/SA (not Eurozone/EE).
+// China/Japan Conflict Track shifts instead of Russia/NATO.
+
+export const stepsD: Step[] = [
+  {
+    id: 'china.D',
+    section: 'D',
+    title: 'Espionage',
+    help: '1 attempt (2 if Relations ≤ 2 AND Posture 2). Roll d10 with DRMs → 6-band result.',
+    inputs: [
+      {
+        id: 'posture',
+        kind: 'enum',
+        label: 'China current Posture',
+        options: [
+          { value: '1', label: 'Posture 1' },
+          { value: '2', label: 'Posture 2' },
+        ],
+      },
+      {
+        id: 'relationsBox',
+        kind: 'int',
+        label: 'China/US Relations Track box (1–5)',
+        min: 1,
+        max: 5,
+      },
+      {
+        id: 'chinaCyberAdv',
+        kind: 'enum',
+        label: 'China Cyber Warfare vs US Cyber Warfare',
+        options: [
+          { value: 'china_2plus', label: 'China ≥ 2 boxes higher (−2 DRM)' },
+          { value: 'china_1',     label: 'China 1 box higher (−1 DRM)' },
+          { value: 'equal',       label: 'Equal' },
+          { value: 'us_1',        label: 'US 1 box higher (+1 DRM)' },
+          { value: 'us_2plus',    label: 'US ≥ 2 boxes higher (+2 DRM)' },
+        ],
+      },
+      {
+        id: 'allyEstranged',
+        kind: 'bool',
+        label: 'Any US ally is currently Estranged? (−2 DRM)',
+      },
+      {
+        id: 'allyNotVeryClose',
+        kind: 'bool',
+        label: 'Any US ally (except India/Gulf States) is NOT Very Close? (−1 DRM)',
+      },
+      {
+        id: 'hasNextEspDRM',
+        kind: 'bool',
+        label: '"+2 DRM to Next Espionage" counter on China?',
+      },
+      {
+        id: 'hasRemainderDRM',
+        kind: 'bool',
+        label: '"+2 DRM for Espionage Remainder of Game" counter on China?',
+      },
+    ],
+    repeat: {
+      count: (ctx) =>
+        Number(ctx.inputs.relationsBox) <= 2 && String(ctx.inputs.posture) === '2' ? 2 : 1,
+      label: 'Espionage Attempt',
+    },
+    dice: [
+      {
+        id: 'espRoll',
+        kind: 'd10',
+        label: 'Espionage roll',
+        drms: [
+          {
+            label: 'China Cyber advantage/disadvantage',
+            value: (ctx) => {
+              switch (String(ctx.inputs.chinaCyberAdv)) {
+                case 'china_2plus': return -2;
+                case 'china_1':    return -1;
+                case 'us_1':       return +1;
+                case 'us_2plus':   return +2;
+                default:           return 0;
+              }
+            },
+          },
+          { label: 'US ally Estranged (−2)', value: (ctx) => (ctx.inputs.allyEstranged === true || ctx.inputs.allyEstranged === 'true' ? -2 : 0) },
+          { label: 'US ally not Very Close (−1)', value: (ctx) => (ctx.inputs.allyNotVeryClose === true || ctx.inputs.allyNotVeryClose === 'true' ? -1 : 0) },
+          { label: '+2 DRM next espionage', value: (ctx) => (ctx.inputs.hasNextEspDRM === true || ctx.inputs.hasNextEspDRM === 'true' ? +2 : 0) },
+          { label: '+2 DRM remainder of game', value: (ctx) => (ctx.inputs.hasRemainderDRM === true || ctx.inputs.hasRemainderDRM === 'true' ? +2 : 0) },
+        ],
+        cap: { min: -3, max: 3 },
+      },
+    ],
+    resolution: {
+      kind: 'custom',
+      resolve: (ctx) => {
+        const m = ctx.dice['espRoll'].modified;
+        if (m <= 0) {
+          return {
+            id: 'china.D.major',
+            summary: 'Thwart US Counter-Intel & Steal Tech.',
+            detail: 'Remove "+2 DRM Remainder" if present. Roll d10 for random Strategic Capability → +1 box for China.',
+            mutations: [{ kind: 'note', note: 'Roll d10 for random capability → +1 box for China.' }],
+          };
+        }
+        if (m <= 3) {
+          return {
+            id: 'china.D.steal',
+            summary: 'Steal Technology — roll d10 for random Strategic Capability → +1 box for China.',
+            mutations: [{ kind: 'note', note: 'Roll d10 for random capability → +1 box for China.' }],
+          };
+        }
+        if (m <= 7) {
+          return {
+            id: 'china.D.warplans',
+            summary: 'Steal Military Secrets / War Plans.',
+            detail: '(a) Increase strength of any Adversary in a US War by 2. (b) Or Ally/US-Supported War by 2. (c) Or +1 box on China/Japan Conflict Track in China\'s favor (else China/India).',
+            mutations: [{ kind: 'note', note: 'Apply best available: US War Adversary +2 → Ally War → China/Japan or China/India CT +1.' }],
+          };
+        }
+        if (m <= 9) {
+          return { id: 'china.D.fail', summary: 'Failure — no effect.' };
+        }
+        if (m <= 11) {
+          return {
+            id: 'china.D.exposed',
+            summary: 'Failure exposes Chinese Cyber/Intel.',
+            detail: 'Place DARPA/Rapid Capabilities counter on Cyber Warfare Track (if available). Place "+2 DRM to Next Espionage" on China.',
+            mutations: [
+              { kind: 'place', target: 'DARPA/Rapid Capabilities on Cyber Warfare Track' },
+              { kind: 'place', target: '+2 DRM to Next Espionage (China)' },
+            ],
+          };
+        }
+        // 12+
+        return {
+          id: 'china.D.network',
+          summary: 'US Counter-Intel identifies major Chinese Cyber Espionage Network.',
+          detail: 'Place "Trending Anti-US" on China Relations Track. US player chooses:\n(a) Apprehend: remove 1 China Influence from Asia/Pacific AND 1 from C/S Asia; "−1 AP" on China; "+2 DRM to Next Espionage" on China.\n(b) Counter-Intel treasure: −1 China Cyber Warfare; +1 Japan Relative Strength on China/Japan CT; "+2 DRM Remainder of Game" on China.',
+          mutations: [{ kind: 'place', target: 'Trending Anti-US on China Relations Track' }],
+        };
+      },
+    },
+  },
+];
