@@ -59,12 +59,15 @@ export interface Mutation {
   value?: unknown;
 }
 
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
+
 export interface Outcome {
   id: string;
   summary: string;
   detail?: string;
   mutations?: Mutation[];
   consumesAction?: boolean; // default true inside section H
+  boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks; faction: Faction };
 }
 
 // ─── Resolutions ──────────────────────────────────────────────────────────────

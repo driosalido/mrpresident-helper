@@ -359,10 +359,22 @@ describe('Russia Step C — selection priority', () => {
     const tracks = makeTracks();
     const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [3, 3]);
     if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
-    const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string; mutations?: { kind: string; target?: string; value?: unknown }[] }[];
+    const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string; mutations?: { kind: string; target?: string; value?: unknown }[]; boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks } }[];
     const updateOutcome = outcomes.find((o) => o.mutations?.some((m) => m.target === 'capabilityTracks'));
     expect(updateOutcome).toBeDefined();
     const updatedTracks = updateOutcome!.mutations!.find((m) => m.target === 'capabilityTracks')!.value as CapabilityTracks;
     expect(updatedTracks.faction.cyber).toBe(5);
+  });
+
+  it('tracksUpdate outcome carries boardSnapshot with before/after', () => {
+    const tracks = makeTracks();
+    const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [3, 3]);
+    if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
+    const outcomes = stepC.resolution.resolve(ctx as never) as { id: string; boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks } }[];
+    const updateOutcome = outcomes.find((o) => o.id === 'russia.C.tracksUpdate');
+    expect(updateOutcome).toBeDefined();
+    expect(updateOutcome!.boardSnapshot).toBeDefined();
+    expect(updateOutcome!.boardSnapshot!.before.faction.cyber).toBe(4);  // original
+    expect(updateOutcome!.boardSnapshot!.after.faction.cyber).toBe(5);   // advanced
   });
 });

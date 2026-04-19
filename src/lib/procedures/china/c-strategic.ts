@@ -129,6 +129,7 @@ export const stepsC: Step[] = [
           id: 'china.C.tracksUpdate',
           summary: 'Capability tracks updated in session.',
           mutations: [{ kind: 'set', target: 'capabilityTracks', value: tracks }],
+          boardSnapshot: { before: tracksRaw, after: tracks, faction: 'china' },
         });
 
         return outcomes;

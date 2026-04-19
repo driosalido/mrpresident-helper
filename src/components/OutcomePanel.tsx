@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Outcome, Mutation } from '@/lib/procedures/types';
+import { CapabilityTrackBoard } from './CapabilityTrackBoard';
 
 function MutationItem({ m }: { m: Mutation }) {
   const [done, setDone] = useState(false);
@@ -34,6 +35,15 @@ function OutcomeCard({ outcome }: { outcome: Outcome }) {
 
   return (
     <div className={`rounded-lg border p-4 space-y-2 ${isAutoLoss ? 'border-red-400 bg-red-50 dark:bg-red-950' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'}`}>
+      {outcome.boardSnapshot && (
+        <div className="pb-2 border-b border-gray-100 dark:border-gray-800">
+          <CapabilityTrackBoard
+            tracks={outcome.boardSnapshot.after}
+            compareTo={outcome.boardSnapshot.before}
+            faction={outcome.boardSnapshot.faction}
+          />
+        </div>
+      )}
       <p className={`font-semibold text-sm ${isAutoLoss ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-gray-100'}`}>
         {outcome.summary}
       </p>

@@ -20,6 +20,16 @@ export interface CapabilityTracks {
   us:      Record<CapabilityKey, number>;   // 1–7
 }
 
+export const CAPABILITY_PRIORITY_LABEL: Record<CapabilityKey, string> = {
+  airForce:         '1',
+  groundForces:     '2',
+  navalForces:      '3',
+  cyber:            '4–5',
+  space:            '6–7',
+  strategicMissiles:'8–9',
+  recon:            '10',
+};
+
 /** Priority-3 d10 selection table (1–10). */
 export function capFromSelectionRoll(roll: number): CapabilityKey {
   if (roll === 1)       return 'airForce';
