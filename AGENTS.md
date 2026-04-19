@@ -45,3 +45,10 @@ src/
 - `Procedure` → `Step[]` → `Resolution` tree is the core data model (see `lib/procedures/types.ts`)
 - Session state (cursor, dice history, shared state, log) is persisted to `localStorage` via `lib/engine/storage.ts`
 - `StepCtx` is the runtime context passed to guard/repeat/resolution functions in procedure data
+
+## Workflow
+
+- `main` is production — never commit directly to it.
+- Branch names: `feature/<kebab-name>`, `fix/<kebab-name>`, `chore/<kebab-name>`.
+- Push branch → Vercel auto-builds a preview URL for testing on phone/iPad before promoting.
+- Merge path: `gh pr create --fill` → squash-merge on GitHub → production redeploys automatically.
