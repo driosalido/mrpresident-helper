@@ -184,13 +184,18 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
         </div>
       </div>
 
-      {/* Action budget indicator (H section) */}
-      {step.section === 'H' && (
+      {/* Action budget indicator (G and H sections) */}
+      {(step.section === 'G' || step.section === 'H') && (
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Remaining Actions:</span>
+          <span className="text-gray-500 dark:text-gray-400">Actions:</span>
           <span className={`font-bold tabular-nums ${actionBudget > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
             {actionBudget}
           </span>
+          {sharedState['totalActions'] !== undefined && (
+            <span className="text-gray-400 dark:text-gray-500 tabular-nums">
+              / {sharedState['totalActions'] as number} total
+            </span>
+          )}
         </div>
       )}
 
