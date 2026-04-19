@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import type { Session, Faction, Game, GameSharedState } from '@/lib/procedures/types';
 import { CAPABILITY_KEYS, type CapabilityKey, type CapabilityTracks } from '@/lib/procedures/capabilities';
+import { DEFAULT_US_RELATION, type USRelation } from '@/lib/procedures/usRelation';
 
 const GAME_KEY = 'mrpres.game.v2';
 const ARCHIVE_LIMIT = 20;
@@ -17,6 +18,10 @@ function defaultSharedState(): GameSharedState {
       russia: zeroTracks(),
       china: zeroTracks(),
       us: zeroTracks(),
+    },
+    usRelation: {
+      russia: { ...DEFAULT_US_RELATION },
+      china:  { ...DEFAULT_US_RELATION },
     },
   };
 }
@@ -138,12 +143,25 @@ export function getTracksForFaction(game: Game, faction: Faction): CapabilityTra
   return { faction: ct[faction], us: ct.us };
 }
 
-export function applyTracksFromSession(game: Game, session: Session): Game {
+export function applySharedStateToGame(game: Game, session: Session): Game {
+  let sharedState = game.sharedState;
+
   const tracks = session.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
-  if (!tracks) return game;
-  const ct = game.sharedState.capabilityTracks;
-  const updatedCt = session.faction === 'russia'
-    ? { ...ct, russia: tracks.faction, us: tracks.us }
-    : { ...ct, china: tracks.faction, us: tracks.us };
-  return { ...game, sharedState: { ...game.sharedState, capabilityTracks: updatedCt } };
+  if (tracks) {
+    const ct = sharedState.capabilityTracks;
+    const updatedCt = session.faction === 'russia'
+      ? { ...ct, russia: tracks.faction, us: tracks.us }
+      : { ...ct, china: tracks.faction, us: tracks.us };
+    sharedState = { ...sharedState, capabilityTracks: updatedCt };
+  }
+
+  const rel = session.sharedState['usRelation'] as USRelation | undefined;
+  if (rel) {
+    sharedState = {
+      ...sharedState,
+      usRelation: { ...sharedState.usRelation, [session.faction]: rel },
+    };
+  }
+
+  return { ...game, sharedState };
 }

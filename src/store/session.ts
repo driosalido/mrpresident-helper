@@ -13,9 +13,8 @@ import {
   archiveRun,
   clearActiveRun,
   getTracksForFaction,
-  applyTracksFromSession,
+  applySharedStateToGame,
 } from '@/lib/engine/storage';
-import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 interface SessionState {
   game: Game | null;
@@ -70,6 +69,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
     const session = createSession(procedure, mode);
     session.sharedState['capabilityTracks'] = getTracksForFaction(g, procedure.faction);
+    session.sharedState['usRelation'] = g.sharedState.usRelation[procedure.faction];
     const updated = upsertActiveRun(g, session);
     saveGame(updated);
     set({ game: updated, session, procedure, lastEntry: null });
@@ -96,9 +96,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!game || !session || !procedure) return null;
     const s = { ...session, log: [...session.log], sharedState: { ...session.sharedState } };
     const entry = resolveStep(s, procedure, inputs);
-    const tracks = s.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
     let updated = upsertActiveRun(game, s);
-    if (tracks) updated = applyTracksFromSession(updated, s);
+    updated = applySharedStateToGame(updated, s);
     saveGame(updated);
     set({ game: updated, session: s, lastEntry: entry });
     return entry;

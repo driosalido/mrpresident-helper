@@ -60,6 +60,7 @@ export interface Mutation {
 }
 
 import type { CapabilityKey, CapabilityTracks } from '@/lib/procedures/capabilities';
+import type { USRelation } from '@/lib/procedures/usRelation';
 
 export interface Outcome {
   id: string;
@@ -148,6 +149,10 @@ export interface GameSharedState {
     russia: Record<CapabilityKey, number>;
     china:  Record<CapabilityKey, number>;
     us:     Record<CapabilityKey, number>;
+  };
+  usRelation: {
+    russia: USRelation;
+    china:  USRelation;
   };
 }
 
