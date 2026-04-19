@@ -46,7 +46,7 @@ export function InputField({ spec, value, onChange }: Props) {
           max={spec.max}
           value={value as number}
           onChange={(e) => onChange(spec.id, parseInt(e.target.value, 10) || 0)}
-          className="w-24 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-24 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
     );
