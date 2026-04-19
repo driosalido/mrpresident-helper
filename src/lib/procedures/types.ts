@@ -59,7 +59,7 @@ export interface Mutation {
   value?: unknown;
 }
 
-import type { CapabilityTracks } from '@/lib/procedures/capabilities';
+import type { CapabilityKey, CapabilityTracks } from '@/lib/procedures/capabilities';
 
 export interface Outcome {
   id: string;
@@ -139,6 +139,26 @@ export interface LogEntry {
   inputs?: Inputs;
   rolls?: DiceResult[];
   outcomes: Outcome[];
+}
+
+// ─── Game ─────────────────────────────────────────────────────────────────────
+
+export interface GameSharedState {
+  capabilityTracks: {
+    russia: Record<CapabilityKey, number>;
+    china:  Record<CapabilityKey, number>;
+    us:     Record<CapabilityKey, number>;
+  };
+}
+
+export interface Game {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  sharedState: GameSharedState;
+  activeRuns: Partial<Record<Faction, Session>>;
+  archive: Session[];
 }
 
 // ─── Runtime context ──────────────────────────────────────────────────────────

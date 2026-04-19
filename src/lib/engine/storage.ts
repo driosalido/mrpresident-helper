@@ -1,99 +1,149 @@
-import type { Session, Faction } from '@/lib/procedures/types';
-import type { CapabilityKey, CapabilityTracks } from '@/lib/procedures/capabilities';
+import { nanoid } from 'nanoid';
+import type { Session, Faction, Game, GameSharedState } from '@/lib/procedures/types';
+import { CAPABILITY_KEYS, type CapabilityKey, type CapabilityTracks } from '@/lib/procedures/capabilities';
 
-// ─── Game state (persists across sessions, shared between both factions) ──────
-
-const GAME_STATE_KEY = 'mrpres.gameState.v1';
-
-export interface GameState {
-  tracks: {
-    russia: Record<CapabilityKey, number>;
-    china:  Record<CapabilityKey, number>;
-    us:     Record<CapabilityKey, number>;
-  };
-}
-
-export function loadGameState(): GameState | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(GAME_STATE_KEY);
-    return raw ? (JSON.parse(raw) as GameState) : null;
-  } catch { return null; }
-}
-
-export function saveGameState(state: GameState): void {
-  if (typeof window === 'undefined') return;
-  try { localStorage.setItem(GAME_STATE_KEY, JSON.stringify(state)); } catch {}
-}
-
-/** Extract CapabilityTracks for a faction from the shared game state. */
-export function getTracksForFaction(state: GameState, faction: Faction): CapabilityTracks {
-  return { faction: state.tracks[faction], us: state.tracks.us };
-}
-
-/** Return a new GameState with the faction's tracks updated from a session. */
-export function applyTracksToGameState(
-  state: GameState,
-  faction: Faction,
-  tracks: CapabilityTracks,
-): GameState {
-  return {
-    ...state,
-    tracks: { ...state.tracks, [faction]: tracks.faction, us: tracks.us },
-  };
-}
-
-// ─── Active session (per-faction, single in-progress run) ────────────────────
-
-const ACTIVE_KEY = (f: Faction) => `mrpres.session.v1.${f}`;
-const ARCHIVE_KEY = 'mrpres.sessions.v1';
+const GAME_KEY = 'mrpres.game.v2';
 const ARCHIVE_LIMIT = 20;
 
-export function saveSession(session: Session): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(ACTIVE_KEY(session.faction), JSON.stringify(session));
+// ─── Zero tracks ─────────────────────────────────────────────────────────────
+
+function zeroTracks(): Record<CapabilityKey, number> {
+  return Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 0])) as Record<CapabilityKey, number>;
 }
 
-export function loadSession(faction: Faction): Session | null {
+function defaultSharedState(): GameSharedState {
+  return {
+    capabilityTracks: {
+      russia: zeroTracks(),
+      china: zeroTracks(),
+      us: zeroTracks(),
+    },
+  };
+}
+
+// ─── Migration from legacy v1 keys ───────────────────────────────────────────
+
+function migrateLegacy(): Game | null {
+  const LEGACY_GAME_STATE = 'mrpres.gameState.v1';
+  const LEGACY_SESSION = (f: string) => `mrpres.session.v1.${f}`;
+  const LEGACY_ARCHIVE = 'mrpres.sessions.v1';
+
+  const legacyKeys = [LEGACY_GAME_STATE, LEGACY_SESSION('russia'), LEGACY_SESSION('china'), LEGACY_ARCHIVE];
+  const hasLegacy = legacyKeys.some((k) => localStorage.getItem(k) !== null);
+  if (!hasLegacy) return null;
+
+  const sharedState = defaultSharedState();
+  try {
+    const raw = localStorage.getItem(LEGACY_GAME_STATE);
+    if (raw) {
+      const gs = JSON.parse(raw) as { tracks: { russia: Record<CapabilityKey, number>; china: Record<CapabilityKey, number>; us: Record<CapabilityKey, number> } };
+      sharedState.capabilityTracks = gs.tracks;
+    }
+  } catch {}
+
+  const activeRuns: Partial<Record<Faction, Session>> = {};
+  for (const faction of ['russia', 'china'] as Faction[]) {
+    try {
+      const raw = localStorage.getItem(LEGACY_SESSION(faction));
+      if (raw) {
+        const s = JSON.parse(raw) as Session;
+        if (!s.finishedAt) activeRuns[faction] = s;
+      }
+    } catch {}
+  }
+
+  let archive: Session[] = [];
+  try {
+    const raw = localStorage.getItem(LEGACY_ARCHIVE);
+    if (raw) archive = JSON.parse(raw) as Session[];
+  } catch {}
+
+  const now = new Date().toISOString();
+  const game: Game = {
+    id: nanoid(),
+    name: 'Untitled Game',
+    createdAt: now,
+    updatedAt: now,
+    sharedState,
+    activeRuns,
+    archive,
+  };
+
+  try {
+    localStorage.setItem(GAME_KEY, JSON.stringify(game));
+    for (const k of legacyKeys) localStorage.removeItem(k);
+  } catch {}
+
+  return game;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export function loadGame(): Game | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(ACTIVE_KEY(faction));
-    if (!raw) return null;
-    const s = JSON.parse(raw) as Session;
-    if (s.finishedAt) {
-      localStorage.removeItem(ACTIVE_KEY(faction));
-      return null;
-    }
-    return s;
-  } catch {
-    return null;
-  }
+    const raw = localStorage.getItem(GAME_KEY);
+    if (raw) return JSON.parse(raw) as Game;
+  } catch {}
+  return migrateLegacy();
 }
 
-export function clearActiveSession(faction: Faction): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(ACTIVE_KEY(faction));
-}
-
-export function archiveSession(session: Session): void {
+export function saveGame(game: Game): void {
   if (typeof window === 'undefined') return;
   try {
-    const raw = localStorage.getItem(ARCHIVE_KEY);
-    const archive: Session[] = raw ? JSON.parse(raw) : [];
-    archive.push(session);
-    if (archive.length > ARCHIVE_LIMIT) {
-      archive.splice(0, archive.length - ARCHIVE_LIMIT);
-    }
-    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+    localStorage.setItem(GAME_KEY, JSON.stringify({ ...game, updatedAt: new Date().toISOString() }));
   } catch {}
 }
 
-export function loadArchive(): Session[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(ARCHIVE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+export function createGame(name: string): Game {
+  const now = new Date().toISOString();
+  return {
+    id: nanoid(),
+    name: name.trim(),
+    createdAt: now,
+    updatedAt: now,
+    sharedState: defaultSharedState(),
+    activeRuns: {},
+    archive: [],
+  };
+}
+
+export function clearGame(): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.removeItem(GAME_KEY); } catch {}
+}
+
+// ─── Run helpers (pure — no side effects) ─────────────────────────────────────
+
+export function upsertActiveRun(game: Game, session: Session): Game {
+  return { ...game, activeRuns: { ...game.activeRuns, [session.faction]: session } };
+}
+
+export function archiveRun(game: Game, session: Session): Game {
+  const archive = [...game.archive, session];
+  if (archive.length > ARCHIVE_LIMIT) archive.splice(0, archive.length - ARCHIVE_LIMIT);
+  const activeRuns = { ...game.activeRuns };
+  delete activeRuns[session.faction];
+  return { ...game, activeRuns, archive };
+}
+
+export function clearActiveRun(game: Game, faction: Faction): Game {
+  const activeRuns = { ...game.activeRuns };
+  delete activeRuns[faction];
+  return { ...game, activeRuns };
+}
+
+export function getTracksForFaction(game: Game, faction: Faction): CapabilityTracks {
+  const ct = game.sharedState.capabilityTracks;
+  return { faction: ct[faction], us: ct.us };
+}
+
+export function applyTracksFromSession(game: Game, session: Session): Game {
+  const tracks = session.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+  if (!tracks) return game;
+  const ct = game.sharedState.capabilityTracks;
+  const updatedCt = session.faction === 'russia'
+    ? { ...ct, russia: tracks.faction, us: tracks.us }
+    : { ...ct, china: tracks.faction, us: tracks.us };
+  return { ...game, sharedState: { ...game.sharedState, capabilityTracks: updatedCt } };
 }

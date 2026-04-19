@@ -23,8 +23,7 @@ export default function WizardPage({ params, searchParams }: {
   const mode: EntryMode = modeRaw === 'crisis-chit' ? 'crisis-chit' : 'regular';
 
   const router = useRouter();
-  const { session, procedure, lastEntry, start, resume, resolve, skip, loadSaved } = useSessionStore();
-  const [savedExists, setSavedExists] = useState(false);
+  const { game, session, procedure, lastEntry, loadGame, startRun, resumeRun, resolve, skip, finishRun, endGame } = useSessionStore();
   const [initialized, setInitialized] = useState(false);
 
   const proc = procedures[faction];
@@ -34,66 +33,39 @@ export default function WizardPage({ params, searchParams }: {
   const factionName = isRussia ? 'Russia Acts' : 'China Acts';
   const factionHeading = isRussia ? 'text-red-700 dark:text-red-400' : 'text-amber-600 dark:text-amber-400';
   const activeCrumb = isRussia ? 'bg-red-600 text-white' : 'bg-amber-500 text-white';
-  const resumeBorder = isRussia ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950' : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950';
-  const resumeText = isRussia ? 'text-red-800 dark:text-red-200' : 'text-amber-800 dark:text-amber-200';
-  const resumeSubText = isRussia ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300';
-  const resumeBtn = isRussia ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700';
-  const resumeBtnOutline = isRussia
-    ? 'border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900'
-    : 'border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900';
 
   useEffect(() => {
     if (initialized) return;
-    const saved = loadSaved(faction, proc);
-    if (saved) {
-      setSavedExists(true);
-    } else {
-      start(proc, mode);
+    if (!game) loadGame();
+    const currentGame = useSessionStore.getState().game;
+    if (!currentGame) {
+      router.replace('/');
+      return;
+    }
+    // Auto-resume if there's an active run, otherwise start fresh
+    const saved = resumeRun(faction, proc);
+    if (!saved) {
+      startRun(proc, mode);
     }
     setInitialized(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [faction]);
 
-  function handleResume() {
-    setSavedExists(false);
+  function handleEndGame() {
+    const gameName = useSessionStore.getState().game?.name ?? 'this game';
+    if (confirm(`End "${gameName}" and wipe all shared state? This cannot be undone.`)) {
+      endGame();
+      router.replace('/');
+    }
   }
 
-  function handleFresh() {
-    setSavedExists(false);
-    start(proc, mode);
+  function handleFinish() {
+    finishRun();
+    router.push('/');
   }
 
   if (!initialized) {
     return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
-  }
-
-  // Resume banner
-  if (savedExists && session) {
-    const savedAt = new Date(session.createdAt).toLocaleString();
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-start justify-center pt-32 p-4">
-        <div className={`max-w-md w-full rounded-2xl border p-6 space-y-4 ${resumeBorder}`}>
-          <h2 className={`text-lg font-semibold ${resumeText}`}>Resume previous session?</h2>
-          <p className={`text-sm ${resumeSubText}`}>
-            A {factionName} session from {savedAt} was found.
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={handleResume}
-              className={`px-4 py-2 text-white rounded-lg text-sm font-semibold ${resumeBtn}`}
-            >
-              Resume
-            </button>
-            <button
-              onClick={handleFresh}
-              className={`px-4 py-2 rounded-lg text-sm ${resumeBtnOutline}`}
-            >
-              Start fresh
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   if (!session || !procedure) {
@@ -104,7 +76,6 @@ export default function WizardPage({ params, searchParams }: {
   const isFinished = !!session.finishedAt || !currentStep;
   const currentSection = currentStep?.section ?? null;
 
-  // Compute repeat total for current step
   let repeatTotal = 1;
   if (currentStep?.repeat) {
     repeatTotal = currentStep.repeat.count({
@@ -136,7 +107,15 @@ export default function WizardPage({ params, searchParams }: {
               </span>
             )}
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleEndGame}
+              className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+            >
+              End game
+            </button>
+            <ThemeToggle />
+          </div>
           {/* Section breadcrumb */}
           <div className="hidden sm:flex items-center gap-1 text-xs">
             {SECTIONS.filter(s => mode === 'crisis-chit' ? s === 'H' : true).map((s) => (
@@ -175,7 +154,7 @@ export default function WizardPage({ params, searchParams }: {
                 </>
               )}
               <button
-                onClick={() => router.push('/')}
+                onClick={handleFinish}
                 className="mt-4 px-6 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-semibold"
               >
                 ← Return Home
