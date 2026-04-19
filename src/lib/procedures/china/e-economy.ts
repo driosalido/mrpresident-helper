@@ -10,14 +10,8 @@ export const stepsE: Step[] = [
     section: 'E',
     title: 'Improve Economy',
     help: 'Skip if China SoE = 7. Roll d10 with DRMs. 1–5 = Improving; 6–8 = no change; 9+ = Worsening (−1 action in F).',
+    guard: (ctx) => Number(ctx.sharedState['soe'] ?? 4) < 7,
     inputs: [
-      {
-        id: 'currentSoE',
-        kind: 'int',
-        label: 'China SoE (skip if 7)',
-        min: 1,
-        max: 7,
-      },
       {
         id: 'unilateralSanctions',
         kind: 'bool',
@@ -52,13 +46,6 @@ export const stepsE: Step[] = [
         label: 'China Influence in Africa (−1 DRM each)',
         min: 0,
       },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'China/US Relations box (−1 if 4, −2 if 5)',
-        min: 1,
-        max: 5,
-      },
     ],
     dice: [
       {
@@ -75,7 +62,7 @@ export const stepsE: Step[] = [
           {
             label: 'Relations 4 (−1) or 5 (−2)',
             value: (ctx) => {
-              const r = Number(ctx.inputs.relationsBox);
+              const r = Number(ctx.sharedState['relationsBox'] ?? 3);
               return r === 4 ? -1 : r === 5 ? -2 : 0;
             },
           },
@@ -86,7 +73,7 @@ export const stepsE: Step[] = [
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        if (Number(ctx.inputs.currentSoE) >= 7) {
+        if (Number(ctx.sharedState['soe'] ?? 4) >= 7) {
           return { id: 'china.E.maxed', summary: 'China SoE = 7 — skip this section.' };
         }
         const m = ctx.dice['ecoRoll'].modified;

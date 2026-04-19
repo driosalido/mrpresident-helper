@@ -35,15 +35,6 @@ export const stepsH: Step[] = [
     inputs: [
       ...triggered('Does H1 trigger? (Always yes — H1 is always attempted first)'),
       {
-        id: 'posture',
-        kind: 'enum',
-        label: 'China current Posture',
-        options: [
-          { value: '1', label: 'Posture 1 (1 attack)' },
-          { value: '2', label: 'Posture 2 (2 attacks)' },
-        ],
-      },
-      {
         id: 'cyberAdv',
         kind: 'enum',
         label: 'China Cyber Warfare vs US Cyber Warfare',
@@ -53,17 +44,9 @@ export const stepsH: Step[] = [
           { value: 'us_wins',    label: 'US > China (No Major, Success ≤5, Fail 6+)' },
         ],
       },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'China/US Relations box',
-        min: 1,
-        max: 5,
-        help: 'If 4–5, target rolls of 1 redirect to 3–6 row; target rolls of 2 redirect to 7–8 row.',
-      },
     ],
     repeat: {
-      count: (ctx) => (String(ctx.inputs.posture) === '2' ? 2 : 1),
+      count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1),
       label: 'Cyber Attack',
     },
     dice: [
@@ -77,7 +60,7 @@ export const stepsH: Step[] = [
           return { id: 'china.H1.skip', summary: 'H1 skipped.', consumesAction: false };
         }
 
-        const relations = Number(ctx.inputs.relationsBox);
+        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
         let target = ctx.dice['cyberTarget'].modified;
 
         // Relations 4–5 target redirection
@@ -218,13 +201,6 @@ export const stepsH: Step[] = [
         min: 1,
         max: 10,
       },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'China/US Relations box (1–5)',
-        min: 1,
-        max: 5,
-      },
     ],
     dice: [
       {
@@ -266,7 +242,7 @@ export const stepsH: Step[] = [
         const names: Record<string, string> = { ap: 'Asia/Pacific', csa: 'Central/South Asia', me: 'Middle East', africa: 'Africa', eurozone: 'Eurozone' };
         const regionName = names[region];
         const roll = ctx.dice['h3Roll'];
-        const relations = Number(ctx.inputs.relationsBox);
+        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
 
         if (roll.modified <= 10) {
           const outcomes: Outcome[] = [
@@ -319,13 +295,6 @@ export const stepsH: Step[] = [
         ],
       },
       {
-        id: 'soe',
-        kind: 'int',
-        label: 'China SoE (used for build roll in option A)',
-        min: 1,
-        max: 7,
-      },
-      {
         id: 'indiaChinaCT',
         kind: 'int',
         label: 'India/China Conflict Track value (used for B intervention)',
@@ -347,7 +316,7 @@ export const stepsH: Step[] = [
         }
 
         const roll = ctx.dice['h4Roll'];
-        const soe = Number(ctx.inputs.soe);
+        const soe = Number(ctx.sharedState['soe'] ?? 4);
 
         if (opt === 'a') {
           const adjusted = roll.modified - 2;
@@ -441,19 +410,13 @@ export const stepsH: Step[] = [
         min: 0,
         help: 'Skip H5 if < 2.',
       },
-      {
-        id: 'posture',
-        kind: 'enum',
-        label: 'China Posture',
-        options: [{ value: '1', label: 'Posture 1' }, { value: '2', label: 'Posture 2 (+1 DRM)' }],
-      },
     ],
     dice: [
       {
         id: 'h5Roll',
         kind: 'd10',
         label: 'Sea Lanes roll',
-        drms: [{ label: 'Posture 2 (+1)', value: (ctx) => (String(ctx.inputs.posture) === '2' ? 1 : 0) }],
+        drms: [{ label: 'Posture 2 (+1)', value: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 1 : 0) }],
         cap: { min: 0, max: 3 },
       },
     ],

@@ -53,17 +53,7 @@ export const stepsG: Step[] = [
     section: 'G',
     title: 'G2 — Quell Rising Internal Dissent',
     help: 'Roll d10 (+1 if Posture 2). 1–4 = spend 1 Action with no game effect. 5+ = no effect, no Action cost.',
-    inputs: [
-      {
-        id: 'posture',
-        kind: 'enum',
-        label: 'Russia current Posture',
-        options: [
-          { value: '1', label: 'Posture 1' },
-          { value: '2', label: 'Posture 2' },
-        ],
-      },
-    ],
+    inputs: [],
     dice: [
       {
         id: 'dissentRoll',
@@ -72,7 +62,7 @@ export const stepsG: Step[] = [
         drms: [
           {
             label: 'Posture 2',
-            value: (ctx) => (String(ctx.inputs.posture) === '2' ? 1 : 0),
+            value: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 1 : 0),
           },
         ],
         cap: { min: 0, max: 3 },

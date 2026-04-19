@@ -92,7 +92,11 @@ export const stepsB: Step[] = [
         outcomes.push({
           id: 'china.B.posture',
           summary: `Posture: ${posture} → ${newPosture}. ${postureNote}`,
-          mutations: [{ kind: 'set' as const, target: 'posture', amount: newPosture }],
+          mutations: [
+            { kind: 'set' as const, target: 'posture', amount: newPosture },
+            { kind: 'set' as const, target: 'relationsBox', amount: relations },
+            { kind: 'set' as const, target: 'soe', amount: soe },
+          ],
         });
 
         let relationsNote = '';

@@ -12,22 +12,6 @@ export const stepsD: Step[] = [
     help: '1 attempt (2 if Relations ≤ 2 AND Posture 2). Roll d10 with DRMs. Results range from stealing tech to exposing a spy network.',
     inputs: [
       {
-        id: 'posture',
-        kind: 'enum',
-        label: 'Russia current Posture',
-        options: [
-          { value: '1', label: 'Posture 1' },
-          { value: '2', label: 'Posture 2' },
-        ],
-      },
-      {
-        id: 'relationsBox',
-        kind: 'int',
-        label: 'Russia/US Relations Track box (1–5)',
-        min: 1,
-        max: 5,
-      },
-      {
         id: 'russiaCyberAdv',
         kind: 'enum',
         label: 'Russia Cyber Warfare vs US Cyber Warfare',
@@ -62,7 +46,7 @@ export const stepsD: Step[] = [
     ],
     repeat: {
       count: (ctx) =>
-        Number(ctx.inputs.relationsBox) <= 2 && String(ctx.inputs.posture) === '2' ? 2 : 1,
+        Number(ctx.sharedState['relationsBox'] ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
       label: 'Espionage Attempt',
     },
     dice: [
