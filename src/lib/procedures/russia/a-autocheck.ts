@@ -29,7 +29,7 @@ export const stepsA: Step[] = [
         id: 'eurozoneStability',
         kind: 'int',
         label: 'Eurozone Stability',
-        min: 1,
+        min: 3,
         max: 8,
       },
       {
