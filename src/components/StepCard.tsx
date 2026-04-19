@@ -87,16 +87,10 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
   const [resolvedTitle, setResolvedTitle] = useState('');
   const [resolvedSection, setResolvedSection] = useState(step.section);
   const [resolvedRepeatLabel, setResolvedRepeatLabel] = useState('');
-  // For SETUP: track which sections have been explicitly touched
+  // For SETUP: relations/economy/posture always have a pre-selected value, so start as confirmed.
+  // Only capability tracks require explicit per-row clicks.
   const [touchedSections, setTouchedSections] = useState<Set<SetupSection>>(
-    () => {
-      if (step.section !== 'SETUP') return new Set<SetupSection>();
-      const pre = new Set<SetupSection>();
-      if (sharedState['usRelation']) pre.add('relations');
-      if (sharedState['soe'] !== undefined) pre.add('economy');
-      if (sharedState['posture'] !== undefined) pre.add('posture');
-      return pre;
-    }
+    () => new Set<SetupSection>(SETUP_SECTIONS)
   );
 
   // Per-row capability touch tracking (faction_<key> and us_<key> must all be clicked)
