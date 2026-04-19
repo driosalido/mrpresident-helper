@@ -1,4 +1,6 @@
 import type { Step } from '@/lib/procedures/types';
+import { deriveCyberAdvD, cyberDrmD } from '@/lib/procedures/capabilities';
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 // Section D — Espionage (China)
 // Same DRM table as Russia. 12+ branch: remove Influence from A/P and C/SA (not Eurozone/EE).
@@ -11,18 +13,6 @@ export const stepsD: Step[] = [
     title: 'Espionage',
     help: '1 attempt (2 if Relations ≤ 2 AND Posture 2). Roll d10 with DRMs → 6-band result.',
     inputs: [
-      {
-        id: 'chinaCyberAdv',
-        kind: 'enum',
-        label: 'China Cyber Warfare vs US Cyber Warfare',
-        options: [
-          { value: 'china_2plus', label: 'China ≥ 2 boxes higher (−2 DRM)' },
-          { value: 'china_1',     label: 'China 1 box higher (−1 DRM)' },
-          { value: 'equal',       label: 'Equal' },
-          { value: 'us_1',        label: 'US 1 box higher (+1 DRM)' },
-          { value: 'us_2plus',    label: 'US ≥ 2 boxes higher (+2 DRM)' },
-        ],
-      },
       {
         id: 'allyEstranged',
         kind: 'bool',
@@ -58,13 +48,9 @@ export const stepsD: Step[] = [
           {
             label: 'China Cyber advantage/disadvantage',
             value: (ctx) => {
-              switch (String(ctx.inputs.chinaCyberAdv)) {
-                case 'china_2plus': return -2;
-                case 'china_1':    return -1;
-                case 'us_1':       return +1;
-                case 'us_2plus':   return +2;
-                default:           return 0;
-              }
+              const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+              if (!tracks) return 0;
+              return cyberDrmD(deriveCyberAdvD(tracks.faction.cyber, tracks.us.cyber));
             },
           },
           { label: 'US ally Estranged (−2)', value: (ctx) => (ctx.inputs.allyEstranged === true || ctx.inputs.allyEstranged === 'true' ? -2 : 0) },

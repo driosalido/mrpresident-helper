@@ -1,4 +1,5 @@
 import type { Procedure } from '@/lib/procedures/types';
+import { stepsSetup } from './setup';
 import { stepsA } from './a-autocheck';
 import { stepsB } from './b-posture';
 import { stepsC } from './c-strategic';
@@ -12,6 +13,7 @@ export const chinaProcedure: Procedure = {
   faction: 'china',
   name: 'China Acts (WPC1)',
   steps: [
+    ...stepsSetup,
     ...stepsA,
     ...stepsB,
     ...stepsC,

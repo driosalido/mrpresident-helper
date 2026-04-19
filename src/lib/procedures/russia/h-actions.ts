@@ -1,4 +1,6 @@
 import type { Step, InputSpec, Outcome } from '@/lib/procedures/types';
+import { deriveCyberAdvH1 } from '@/lib/procedures/capabilities';
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 // Section H — Remaining Action Hierarchy (10 actions, in order)
 // Each action has a "triggered?" input so the player can confirm preconditions.
@@ -52,16 +54,6 @@ export const stepsH: Step[] = [
     help: 'Makes 2 attacks (Posture 1) or 3 attacks (Posture 2). Each attack: roll d10 for target, then d10 for success (vs Cyber Capability comparison).',
     inputs: [
       ...triggered('Does H1 trigger? (Always yes — H1 is always attempted first)'),
-      {
-        id: 'cyberAdv',
-        kind: 'enum',
-        label: 'Russia Cyber Warfare vs US Cyber Warfare',
-        options: [
-          { value: 'russia_wins', label: 'Russia > US (Major ≤3, Success ≤9, Fail 10)' },
-          { value: 'equal',       label: 'Equal (Major ≤1, Success ≤7, Fail 8+)' },
-          { value: 'us_wins',     label: 'US > Russia (No Major, Success ≤5, Fail 6+)' },
-        ],
-      },
     ],
     repeat: {
       count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 3 : 2),
@@ -80,10 +72,13 @@ export const stepsH: Step[] = [
 
         const target = ctx.dice['cyberTarget'].modified;
         const success = ctx.dice['cyberSuccess'].modified;
-        const adv = String(ctx.inputs.cyberAdv);
+        const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+        const adv = tracks
+          ? deriveCyberAdvH1(tracks.faction.cyber, tracks.us.cyber)
+          : 'equal';
 
         let level: 'major' | 'success' | 'fail';
-        if (adv === 'russia_wins') {
+        if (adv === 'faction_wins') {
           level = success <= 3 ? 'major' : success <= 9 ? 'success' : 'fail';
         } else if (adv === 'equal') {
           level = success <= 1 ? 'major' : success <= 7 ? 'success' : 'fail';

@@ -3,7 +3,7 @@
 
 export type Faction = 'russia' | 'china';
 export type EntryMode = 'regular' | 'crisis-chit';
-export type Section = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export type Section = 'SETUP' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
 
 // ─── Inputs ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +55,7 @@ export interface Mutation {
   target?: string;
   amount?: number;
   note?: string;
+  value?: unknown;
 }
 
 export interface Outcome {

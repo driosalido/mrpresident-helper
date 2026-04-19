@@ -3,6 +3,15 @@ import { makeSeededRng, setRng, rollD10 } from '@/lib/engine/dice';
 import { capDrm } from '@/lib/engine/drm';
 import { resolveStep, skipStep, getCurrentStep } from '@/lib/engine/runner';
 import type { Procedure, Session, Step } from '@/lib/procedures/types';
+import {
+  capFromSelectionRoll,
+  deriveCyberAdvD,
+  cyberDrmD,
+  deriveCyberAdvH1,
+} from '@/lib/procedures/capabilities';
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
+import { stepsSetup as russiaSetup } from '@/lib/procedures/russia/setup';
+import { stepsC as russiaStepsC } from '@/lib/procedures/russia/c-strategic';
 
 // ─── RNG determinism ──────────────────────────────────────────────────────────
 
@@ -218,5 +227,145 @@ describe('runner', () => {
     expect(session.finishedAt).toBeDefined();
     expect(session.cursorStepId).toBeNull();
     expect(getCurrentStep(session, proc)).toBeNull();
+  });
+
+  it('set mutation with value stores object in sharedState', () => {
+    const obj = { faction: { cyber: 5 }, us: { cyber: 3 } };
+    const proc: Procedure = {
+      faction: 'russia',
+      name: 'test',
+      steps: [
+        {
+          ...staticStep('s1'),
+          resolution: {
+            kind: 'static',
+            outcome: {
+              id: 's1.out',
+              summary: 'store',
+              mutations: [{ kind: 'set', target: 'myObj', value: obj }],
+            },
+          },
+        },
+      ],
+    };
+    const session = makeSession({ cursorStepId: 's1' });
+    resolveStep(session, proc, {});
+    expect(session.sharedState['myObj']).toEqual(obj);
+  });
+
+  it('SETUP step persists capabilityTracks to sharedState', () => {
+    const proc: Procedure = {
+      faction: 'russia',
+      name: 'test',
+      steps: [...russiaSetup, staticStep('done')],
+    };
+    const session = makeSession({ cursorStepId: 'russia.SETUP' });
+    const inputs: Record<string, string | number | boolean> = {};
+    for (const k of ['airForce', 'groundForces', 'navalForces', 'cyber', 'space', 'strategicMissiles', 'recon']) {
+      inputs[`faction_${k}`] = 3;
+      inputs[`us_${k}`] = 4;
+      inputs[`sanctions_${k}`] = false;
+    }
+    resolveStep(session, proc, inputs);
+    const tracks = session.sharedState['capabilityTracks'] as CapabilityTracks;
+    expect(tracks).toBeDefined();
+    expect(tracks.faction.cyber).toBe(3);
+    expect(tracks.us.cyber).toBe(4);
+    expect(tracks.sanctions.cyber).toBe(false);
+  });
+});
+
+// ─── Capability helpers ───────────────────────────────────────────────────────
+
+describe('capFromSelectionRoll', () => {
+  it('maps 1 → airForce', () => expect(capFromSelectionRoll(1)).toBe('airForce'));
+  it('maps 2 → groundForces', () => expect(capFromSelectionRoll(2)).toBe('groundForces'));
+  it('maps 3 → navalForces', () => expect(capFromSelectionRoll(3)).toBe('navalForces'));
+  it('maps 4 → cyber', () => expect(capFromSelectionRoll(4)).toBe('cyber'));
+  it('maps 5 → cyber', () => expect(capFromSelectionRoll(5)).toBe('cyber'));
+  it('maps 6 → space', () => expect(capFromSelectionRoll(6)).toBe('space'));
+  it('maps 7 → space', () => expect(capFromSelectionRoll(7)).toBe('space'));
+  it('maps 8 → strategicMissiles', () => expect(capFromSelectionRoll(8)).toBe('strategicMissiles'));
+  it('maps 9 → strategicMissiles', () => expect(capFromSelectionRoll(9)).toBe('strategicMissiles'));
+  it('maps 10 → recon', () => expect(capFromSelectionRoll(10)).toBe('recon'));
+});
+
+describe('deriveCyberAdvD', () => {
+  it('faction ≥ us+2 → faction_2plus', () => expect(deriveCyberAdvD(6, 3)).toBe('faction_2plus'));
+  it('faction = us+1 → faction_1',     () => expect(deriveCyberAdvD(4, 3)).toBe('faction_1'));
+  it('equal → equal',                  () => expect(deriveCyberAdvD(4, 4)).toBe('equal'));
+  it('faction = us−1 → us_1',          () => expect(deriveCyberAdvD(3, 4)).toBe('us_1'));
+  it('faction ≤ us−2 → us_2plus',      () => expect(deriveCyberAdvD(2, 5)).toBe('us_2plus'));
+
+  it('cyberDrmD maps faction_2plus to −2', () => expect(cyberDrmD('faction_2plus')).toBe(-2));
+  it('cyberDrmD maps us_2plus to +2',      () => expect(cyberDrmD('us_2plus')).toBe(+2));
+  it('cyberDrmD maps equal to 0',          () => expect(cyberDrmD('equal')).toBe(0));
+});
+
+describe('deriveCyberAdvH1', () => {
+  it('faction > us → faction_wins', () => expect(deriveCyberAdvH1(5, 4)).toBe('faction_wins'));
+  it('equal → equal',               () => expect(deriveCyberAdvH1(4, 4)).toBe('equal'));
+  it('faction < us → us_wins',      () => expect(deriveCyberAdvH1(3, 4)).toBe('us_wins'));
+});
+
+describe('Russia Step C — selection priority', () => {
+  const stepC = russiaStepsC[0];
+
+  function makeCtxWithTracks(
+    tracks: CapabilityTracks,
+    posture: '1' | '2',
+    sel: number[],
+    imp: number[],
+  ) {
+    // Build a fake DiceResult for each die
+    const dice: Record<string, { sum: number; modified: number }> = {};
+    sel.forEach((v, i) => { dice[`sel${i}`] = { sum: v, modified: v }; });
+    imp.forEach((v, i) => { dice[`imp${i}`] = { sum: v, modified: v }; });
+    return {
+      faction: 'russia' as const,
+      mode: 'regular' as const,
+      inputs: {},
+      dice: dice as never,
+      actionBudget: 5,
+      sharedState: { posture, capabilityTracks: tracks },
+    };
+  }
+
+  function makeTracks(overrides: Partial<CapabilityTracks> = {}): CapabilityTracks {
+    const base = { airForce: 4, groundForces: 4, navalForces: 4, cyber: 4, space: 4, strategicMissiles: 4, recon: 4 };
+    return {
+      faction:   { ...base, ...overrides.faction },
+      us:        { ...base, ...overrides.us },
+      sanctions: { airForce: false, groundForces: false, navalForces: false, cyber: false, space: false, strategicMissiles: false, recon: false, ...overrides.sanctions },
+    };
+  }
+
+  it('priority 1: picks lag ≥ 2 cap over faction priority', () => {
+    const tracks = makeTracks({ faction: { airForce: 1, groundForces: 4, navalForces: 4, cyber: 4, space: 4, strategicMissiles: 4, recon: 4 }, us: { airForce: 4, groundForces: 4, navalForces: 4, cyber: 4, space: 4, strategicMissiles: 4, recon: 4 } });
+    const ctx = makeCtxWithTracks(tracks, '1', [1, 1], [10, 10]);
+    if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
+    const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string }[];
+    expect(outcomes[0].summary).toContain('Air Force');
+    expect(outcomes[0].summary).toContain('No advance');
+  });
+
+  it('priority 2: picks Cyber when no lag and both pair eligible', () => {
+    const tracks = makeTracks();
+    const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [10, 10]);
+    if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
+    const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string }[];
+    expect(outcomes[0].summary).toContain('Cyber');
+    expect(outcomes[1].summary).toContain('Strategic Missiles');
+  });
+
+  it('success roll ≤ threshold advances track and stores to sharedState', () => {
+    const tracks = makeTracks();
+    const ctx = makeCtxWithTracks(tracks, '1', [5, 5], [3, 3]);
+    if (stepC.resolution.kind !== 'custom') throw new Error('expected custom');
+    const outcomes = stepC.resolution.resolve(ctx as never) as { summary: string; mutations?: { kind: string; target?: string; value?: unknown }[] }[];
+    const updateOutcome = outcomes.find((o) => o.mutations?.some((m) => m.target === 'capabilityTracks'));
+    expect(updateOutcome).toBeDefined();
+    const updatedTracks = updateOutcome!.mutations!.find((m) => m.target === 'capabilityTracks')!.value as CapabilityTracks;
+    expect(updatedTracks.faction.cyber).toBe(5);
   });
 });

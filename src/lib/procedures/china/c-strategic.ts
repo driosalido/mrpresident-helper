@@ -1,79 +1,130 @@
-import type { Step } from '@/lib/procedures/types';
+import type { Step, Outcome } from '@/lib/procedures/types';
+import {
+  CAPABILITY_KEYS, CAPABILITY_LABELS,
+  capFromSelectionRoll,
+} from '@/lib/procedures/capabilities';
+import type { CapabilityTracks, CapabilityKey } from '@/lib/procedures/capabilities';
 
 // Section C — Improve Strategic Capabilities (China)
-// Same structure as Russia's, but priority pair is Cyber Warfare + Naval Forces T&T
-// (instead of Russia's Cyber + Missiles).
+// 2 attempts (Posture 1) or 3 attempts (Posture 2).
+// Priority: (1) lag ≥ 2 vs US, (2) Cyber + Naval Forces, (3) d10 table.
+// Skip if already maxed (7) or already attempted this segment.
+// Improvement roll: d10 + 1 (if sanctions marker on that track). Success ≤ 4 (P1) or ≤ 5 (P2).
 
-const CAPABILITIES = [
-  'Cyber Warfare',
-  'Naval Forces Training & Tech',
-  'Strategic Missiles / Missile Defense',
-  'Space Warfare',
-  'Strategic Recon / Intel',
-  'Air Warfare',
-  'Ground Warfare',
-];
+const CHINA_PRIORITY: CapabilityKey[] = ['cyber', 'navalForces'];
 
 export const stepsC: Step[] = [
   {
     id: 'china.C',
     section: 'C',
     title: 'Improve Strategic Capabilities',
-    help: '2 attempts (Posture 1) or 3 attempts (Posture 2). Roll d10 +1 per Sanctions. Success ≤ 4 (P1) or ≤ 5 (P2). Priority: trailing areas → Cyber + Naval → random.',
-    inputs: [
-      {
-        id: 'sanctionsCount',
-        kind: 'int',
-        label: 'Sanctions counters on China',
-        min: 0,
-        max: 5,
-        help: '+1 DRM per counter (makes success harder).',
-      },
-      {
-        id: 'targetCapability',
-        kind: 'enum',
-        label: 'Which Capability is China attempting to improve?',
-        help: 'Follow hierarchy: areas trailing US by ≥2 boxes → Cyber/Naval → random.',
-        options: CAPABILITIES.map((c) => ({ value: c, label: c })),
-      },
-    ],
-    repeat: {
-      count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 3 : 2),
-      label: 'Capability Attempt',
-    },
+    help: 'China makes 2 attempts (Posture 1) or 3 (Posture 2). Selection priority: (1) lag ≥ 2 vs US → (2) Cyber + Naval Forces → (3) d10 table. Roll d10 per attempt; +1 if Sanctions marker on that track. Success ≤ 4 (P1) or ≤ 5 (P2).',
+    inputs: [],
     dice: [
-      {
-        id: 'stratRoll',
-        kind: 'd10',
-        label: 'Capability improvement roll',
-        drms: [
-          {
-            label: 'Sanctions (+1 per counter)',
-            value: (ctx) => Number(ctx.inputs.sanctionsCount),
-          },
-        ],
-        cap: { min: -3, max: 3 },
-      },
+      { id: 'sel0', kind: 'd10', label: 'Selection die — attempt 1' },
+      { id: 'sel1', kind: 'd10', label: 'Selection die — attempt 2' },
+      { id: 'sel2', kind: 'd10', label: 'Selection die — attempt 3' },
+      { id: 'imp0', kind: 'd10', label: 'Improvement die — attempt 1' },
+      { id: 'imp1', kind: 'd10', label: 'Improvement die — attempt 2' },
+      { id: 'imp2', kind: 'd10', label: 'Improvement die — attempt 3' },
     ],
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        const threshold = String(ctx.sharedState['posture'] ?? '1') === '2' ? 5 : 4;
-        const capability = String(ctx.inputs.targetCapability);
-        const roll = ctx.dice['stratRoll'];
-        if (roll.modified <= threshold) {
+        const posture = String(ctx.sharedState['posture'] ?? '1');
+        const attempts = posture === '2' ? 3 : 2;
+        const threshold = posture === '2' ? 5 : 4;
+
+        const tracksRaw = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+        if (!tracksRaw) {
           return {
-            id: 'china.C.success',
-            summary: `Success! Advance China's "${capability}" track by 1 box.`,
-            detail: `Roll: ${roll.sum} + DRM ${roll.drmTotal} = ${roll.modified} ≤ ${threshold}.`,
-            mutations: [{ kind: 'shift', target: capability, amount: 1 }],
+            id: 'china.C.nosetup',
+            summary: 'SETUP step not completed — capability tracks unknown. Please restart the session to record track levels.',
           };
         }
-        return {
-          id: 'china.C.fail',
-          summary: `No advance on "${capability}" this attempt.`,
-          detail: `Roll: ${roll.sum} + DRM ${roll.drmTotal} = ${roll.modified} > ${threshold}.`,
+
+        const tracks: CapabilityTracks = {
+          faction:   { ...tracksRaw.faction },
+          us:        { ...tracksRaw.us },
+          sanctions: { ...tracksRaw.sanctions },
         };
+
+        const improved = new Set<CapabilityKey>();
+        const outcomes: Outcome[] = [];
+
+        const eligible = (cap: CapabilityKey): boolean =>
+          !improved.has(cap) && tracks.faction[cap] < 7;
+
+        for (let i = 0; i < attempts; i++) {
+          const selRoll = ctx.dice[`sel${i}`].sum;   // raw 1–10
+          const impRoll = ctx.dice[`imp${i}`].sum;   // raw 1–10
+          const remaining = attempts - i;
+
+          let target: CapabilityKey | null = null;
+
+          // Priority 1: largest lag ≥ 2 vs US
+          const lagCandidates = CAPABILITY_KEYS.filter(
+            (cap) => eligible(cap) && (tracks.us[cap] - tracks.faction[cap]) >= 2,
+          );
+          if (lagCandidates.length > 0) {
+            const maxLag = Math.max(...lagCandidates.map((c) => tracks.us[c] - tracks.faction[c]));
+            const topTier = lagCandidates.filter((c) => tracks.us[c] - tracks.faction[c] === maxLag);
+            target = topTier[selRoll % topTier.length];
+          }
+
+          // Priority 2: China faction pair — Cyber + Naval Forces
+          if (!target) {
+            const available = CHINA_PRIORITY.filter(eligible);
+            if (available.length > 0) {
+              target = (remaining === 1 && available.length > 1)
+                ? available[selRoll % available.length]
+                : available[0];
+            }
+          }
+
+          // Priority 3: d10 selection table
+          if (!target) {
+            const fromTable = capFromSelectionRoll(selRoll);
+            if (eligible(fromTable)) {
+              target = fromTable;
+            } else {
+              outcomes.push({
+                id: `china.C.attempt${i}.wasted`,
+                summary: `Attempt ${i + 1}: d10=${selRoll} → ${CAPABILITY_LABELS[fromTable]} — already at max or previously attempted. Attempt wasted.`,
+              });
+              continue;
+            }
+          }
+
+          // Improvement roll
+          const sanctions = tracks.sanctions[target] ? 1 : 0;
+          const modified = impRoll + sanctions;
+          const label = CAPABILITY_LABELS[target];
+          const sanctionsNote = sanctions ? ' +1 (sanctions marker)' : '';
+
+          improved.add(target);
+
+          if (modified <= threshold) {
+            tracks.faction[target] = Math.min(7, tracks.faction[target] + 1);
+            outcomes.push({
+              id: `china.C.attempt${i}.success`,
+              summary: `Attempt ${i + 1}: **${label}** — roll ${impRoll}${sanctionsNote} = ${modified} ≤ ${threshold} — SUCCESS. China ${label} → ${tracks.faction[target]}.`,
+            });
+          } else {
+            outcomes.push({
+              id: `china.C.attempt${i}.fail`,
+              summary: `Attempt ${i + 1}: **${label}** — roll ${impRoll}${sanctionsNote} = ${modified} > ${threshold} — No advance.`,
+            });
+          }
+        }
+
+        outcomes.push({
+          id: 'china.C.tracksUpdate',
+          summary: 'Capability tracks updated in session.',
+          mutations: [{ kind: 'set', target: 'capabilityTracks', value: tracks }],
+        });
+
+        return outcomes;
       },
     },
   },

@@ -1,8 +1,11 @@
 import type { Step } from '@/lib/procedures/types';
+import { deriveCyberAdvD, cyberDrmD } from '@/lib/procedures/capabilities';
+import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 // Section D — Espionage
 // 1 attempt normally; 2 attempts if Relations ≤ 2 AND Posture = 2.
 // Roll d10 with DRMs → 6-band result table.
+// Cyber advantage is derived from capabilityTracks in sharedState.
 
 export const stepsD: Step[] = [
   {
@@ -11,18 +14,6 @@ export const stepsD: Step[] = [
     title: 'Espionage',
     help: '1 attempt (2 if Relations ≤ 2 AND Posture 2). Roll d10 with DRMs. Results range from stealing tech to exposing a spy network.',
     inputs: [
-      {
-        id: 'russiaCyberAdv',
-        kind: 'enum',
-        label: 'Russia Cyber Warfare vs US Cyber Warfare',
-        options: [
-          { value: 'russia_2plus', label: 'Russia ≥ 2 boxes higher than US (−2 DRM)' },
-          { value: 'russia_1',     label: 'Russia 1 box higher than US (−1 DRM)' },
-          { value: 'equal',        label: 'Equal' },
-          { value: 'us_1',         label: 'US 1 box higher than Russia (+1 DRM)' },
-          { value: 'us_2plus',     label: 'US ≥ 2 boxes higher than Russia (+2 DRM)' },
-        ],
-      },
       {
         id: 'allyEstranged',
         kind: 'bool',
@@ -58,13 +49,9 @@ export const stepsD: Step[] = [
           {
             label: 'Russia Cyber advantage/disadvantage',
             value: (ctx) => {
-              switch (String(ctx.inputs.russiaCyberAdv)) {
-                case 'russia_2plus': return -2;
-                case 'russia_1':    return -1;
-                case 'us_1':        return +1;
-                case 'us_2plus':    return +2;
-                default:            return 0;
-              }
+              const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+              if (!tracks) return 0;
+              return cyberDrmD(deriveCyberAdvD(tracks.faction.cyber, tracks.us.cyber));
             },
           },
           {
