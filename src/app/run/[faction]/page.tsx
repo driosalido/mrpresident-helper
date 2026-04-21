@@ -68,6 +68,11 @@ export default function WizardPage({ params, searchParams }: {
     router.push('/');
   }
 
+  function handleNextTurn() {
+    finishRun();
+    startRun(proc, mode);
+  }
+
   if (!initialized) {
     return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
   }
@@ -170,15 +175,25 @@ export default function WizardPage({ params, searchParams }: {
                 <>
                   <p className="text-4xl">✓</p>
                   <h2 className="text-2xl font-bold text-green-700 dark:text-green-400">{factionName} Complete</h2>
-                  <p className="text-green-600 dark:text-green-400">All sections resolved. Export the log or return home.</p>
+                  <p className="text-green-600 dark:text-green-400">All sections resolved. Start the next turn or return home.</p>
                 </>
               )}
-              <button
-                onClick={handleFinish}
-                className="mt-4 px-6 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-semibold"
-              >
-                ← Return Home
-              </button>
+              <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
+                {!session.sharedState['autoLoss'] && (
+                  <button
+                    onClick={handleNextTurn}
+                    className={`px-6 py-2 rounded-lg font-semibold text-white ${isRussia ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}
+                  >
+                    Next Turn →
+                  </button>
+                )}
+                <button
+                  onClick={handleFinish}
+                  className="px-6 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-semibold"
+                >
+                  ← Return Home
+                </button>
+              </div>
             </div>
           ) : currentStep ? (
             <StepCard
