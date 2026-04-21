@@ -93,8 +93,13 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     () => new Set<SetupSection>(SETUP_SECTIONS)
   );
 
-  // Per-row capability touch tracking — always starts empty; user must explicitly click every row
-  const [touchedCapRows, setTouchedCapRows] = useState<Set<string>>(() => new Set<string>());
+  // Per-row capability touch tracking — pre-populate from saved state; otherwise empty so user must click every row
+  const [touchedCapRows, setTouchedCapRows] = useState<Set<string>>(() => {
+    if (step.section === 'SETUP' && (sharedState['capabilityTracks'] as CapabilityTracks | undefined)) {
+      return new Set(ALL_CAP_ENTRIES);
+    }
+    return new Set<string>();
+  });
 
   function markTouched(section: SetupSection) {
     setTouchedSections((prev) => {

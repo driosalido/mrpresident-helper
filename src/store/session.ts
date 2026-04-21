@@ -87,8 +87,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       set({ game: updated });
       return null;
     }
-    set({ session: raw, procedure });
-    return raw;
+    // Backfill fields that older sessions may be missing
+    const session = { ...raw, sharedState: { ...raw.sharedState } };
+    if (!session.sharedState['capabilityTracks']) {
+      session.sharedState['capabilityTracks'] = getTracksForFaction(game, faction);
+    }
+    if (!session.sharedState['usRelation']) {
+      session.sharedState['usRelation'] = game.sharedState.usRelation[faction];
+    }
+    set({ session, procedure });
+    return session;
   },
 
   resolve(inputs) {

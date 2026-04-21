@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import type { Outcome, Mutation, StateChange, Faction } from '@/lib/procedures/types';
 import { CapabilityTrackBoard } from './CapabilityTrackBoard';
+import { EconomyTrackBoard } from './EconomyTrackBoard';
+import type { SoEValue, SoETrend } from './EconomyTrackBoard';
+import { RelationsTrackBoard } from './RelationsTrackBoard';
+import type { USRelationLevel } from '@/lib/procedures/usRelation';
 
 function MutationItem({ m }: { m: Mutation }) {
   const [done, setDone] = useState(false);
@@ -127,6 +131,27 @@ function OutcomeCard({ outcome, faction }: { outcome: Outcome; faction: Faction 
           </div>
         );
       })()}
+      {outcome.soeSnapshot && (
+        <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+          <EconomyTrackBoard
+            value={outcome.soeSnapshot.after.value as SoEValue}
+            trend={outcome.soeSnapshot.after.trend as SoETrend}
+            faction={faction}
+            compareTo={{ value: outcome.soeSnapshot.before.value as SoEValue, trend: outcome.soeSnapshot.before.trend as SoETrend }}
+          />
+        </div>
+      )}
+      {outcome.relationsSnapshot && (
+        <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+          <RelationsTrackBoard
+            level={outcome.relationsSnapshot.after.level as USRelationLevel}
+            pendingAntiUS={outcome.relationsSnapshot.after.pendingAntiUS}
+            pendingProUS={outcome.relationsSnapshot.after.pendingProUS}
+            faction={faction}
+            compareTo={outcome.relationsSnapshot.before as { level: USRelationLevel; pendingAntiUS: number; pendingProUS: number }}
+          />
+        </div>
+      )}
     </div>
   );
 }

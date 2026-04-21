@@ -127,13 +127,15 @@ export const stepsC: Step[] = [
           const label = CAPABILITY_LABELS[target];
           const modified = impRoll + sanctions;
           const sanctionsNote = sanctions > 0 ? ` +${sanctions} (sanctions)` : '';
-          improved.add(target);
-
           if (modified <= threshold) {
+            improved.add(target);
+            const beforeVal = tracks.faction[target];
             tracks.faction[target] = Math.min(7, tracks.faction[target] + 1);
+            const afterVal = tracks.faction[target];
             outcomes.push({
               id: `russia.C.attempt${i}.success`,
-              summary: `Attempt ${i + 1}: **${label}**${selNote} — roll ${impRoll}${sanctionsNote} = ${modified} ≤ ${threshold} — SUCCESS. Russia ${label} → ${tracks.faction[target]}.`,
+              summary: `Attempt ${i + 1}: **${label}**${selNote} — roll ${impRoll}${sanctionsNote} = ${modified} ≤ ${threshold} — SUCCESS (${beforeVal} → ${afterVal}).`,
+              stateChanges: [{ label, from: String(beforeVal), to: String(afterVal) }],
             });
           } else {
             outcomes.push({

@@ -1,4 +1,4 @@
-import type { Step, StateChange } from '@/lib/procedures/types';
+import type { Step, StateChange, RelationsSnapshot } from '@/lib/procedures/types';
 import {
   US_RELATION_LABELS,
   DEFAULT_US_RELATION,
@@ -113,14 +113,24 @@ export const stepsB: Step[] = [
         const relationsStateChanges: StateChange[] = [];
         if (cancelledAnti > 0) relationsStateChanges.push({ label: 'Anti-US trending', from: String(cancelledAnti), to: '0', removed: true });
         if (cancelledPro > 0)  relationsStateChanges.push({ label: 'Pro-US trending',  from: String(cancelledPro),  to: '0', removed: true });
+        if (newRelation.pendingAntiUS !== currentRelation.pendingAntiUS) {
+          relationsStateChanges.push({ label: 'Anti-US pending', from: String(currentRelation.pendingAntiUS), to: String(newRelation.pendingAntiUS) });
+        }
+        if (newRelation.pendingProUS !== currentRelation.pendingProUS) {
+          relationsStateChanges.push({ label: 'Pro-US pending', from: String(currentRelation.pendingProUS), to: String(newRelation.pendingProUS) });
+        }
         if (newRelation.level !== currentRelation.level) {
           relationsStateChanges.push({ label: 'US Relations', from: US_RELATION_LABELS[currentRelation.level], to: US_RELATION_LABELS[newRelation.level] });
         }
+
+        const relBefore: RelationsSnapshot = { level: currentRelation.level, pendingAntiUS: currentRelation.pendingAntiUS, pendingProUS: currentRelation.pendingProUS };
+        const relAfter: RelationsSnapshot = { level: newRelation.level, pendingAntiUS: newRelation.pendingAntiUS, pendingProUS: newRelation.pendingProUS };
 
         outcomes.push({
           id: 'china.B.relations',
           summary: relationsNote,
           stateChanges: relationsStateChanges.length ? relationsStateChanges : undefined,
+          relationsSnapshot: { before: relBefore, after: relAfter },
           mutations: [
             { kind: 'set' as const, target: 'usRelation', value: newRelation },
           ],

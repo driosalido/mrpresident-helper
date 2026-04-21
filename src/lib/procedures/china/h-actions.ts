@@ -52,7 +52,7 @@ export const stepsH: Step[] = [
           return { id: 'china.H1.skip', summary: 'H1 skipped.', consumesAction: false };
         }
 
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
         let target = ctx.dice['cyberTarget'].modified;
 
         // Relations 4–5 target redirection
@@ -237,7 +237,7 @@ export const stepsH: Step[] = [
         const names: Record<string, string> = { ap: 'Asia/Pacific', csa: 'Central/South Asia', me: 'Middle East', africa: 'Africa', eurozone: 'Eurozone' };
         const regionName = names[region];
         const roll = ctx.dice['h3Roll'];
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
 
         if (roll.modified <= 10) {
           const outcomes: Outcome[] = [

@@ -36,7 +36,7 @@ export const stepsD: Step[] = [
     ],
     repeat: {
       count: (ctx) =>
-        Number(ctx.sharedState['relationsBox'] ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
+        Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
       label: 'Espionage Attempt',
     },
     dice: [
