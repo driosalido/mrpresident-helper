@@ -68,9 +68,9 @@ export default function WizardPage({ params, searchParams }: {
     router.push('/');
   }
 
-  function handleNextTurn() {
+  function handleActivate(targetFaction: Faction, targetMode: EntryMode) {
     finishRun();
-    startRun(proc, mode);
+    router.push(`/run/${targetFaction}${targetMode === 'crisis-chit' ? '?mode=crisis-chit' : ''}`);
   }
 
   if (!initialized) {
@@ -175,25 +175,32 @@ export default function WizardPage({ params, searchParams }: {
                 <>
                   <p className="text-4xl">✓</p>
                   <h2 className="text-2xl font-bold text-green-700 dark:text-green-400">{factionName} Complete</h2>
-                  <p className="text-green-600 dark:text-green-400">All sections resolved. Start the next turn or return home.</p>
+                  <p className="text-green-600 dark:text-green-400">All sections resolved. Run another activation or end the game turn.</p>
                 </>
               )}
-              <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
-                {!session.sharedState['autoLoss'] && (
-                  <button
-                    onClick={handleNextTurn}
-                    className={`px-6 py-2 rounded-lg font-semibold text-white ${isRussia ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}
-                  >
-                    Next Turn →
+              {!session.sharedState['autoLoss'] && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next activation</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => handleActivate('russia', 'regular')} className="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 text-sm">Russia — Regular</button>
+                    <button onClick={() => handleActivate('russia', 'crisis-chit')} className="px-4 py-2 rounded-lg font-semibold text-white bg-red-400 hover:bg-red-500 text-sm">Russia — Crisis Chit</button>
+                    <button onClick={() => handleActivate('china', 'regular')} className="px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 text-sm">China — Regular</button>
+                    <button onClick={() => handleActivate('china', 'crisis-chit')} className="px-4 py-2 rounded-lg font-semibold text-white bg-amber-400 hover:bg-amber-500 text-sm">China — Crisis Chit</button>
+                  </div>
+                  <div className="pt-2 border-t border-green-200 dark:border-green-800">
+                    <button onClick={handleFinish} className="w-full px-6 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg font-semibold">
+                      New Game Turn →
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!!session.sharedState['autoLoss'] && (
+                <div className="mt-4">
+                  <button onClick={handleFinish} className="px-6 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-semibold">
+                    ← Return Home
                   </button>
-                )}
-                <button
-                  onClick={handleFinish}
-                  className="px-6 py-2 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg font-semibold"
-                >
-                  ← Return Home
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           ) : currentStep ? (
             <StepCard
