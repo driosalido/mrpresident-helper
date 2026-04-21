@@ -66,6 +66,7 @@ export interface StateChange {
   label: string;
   from: string;
   to: string;
+  removed?: boolean;  // render in red with strikethrough instead of before→after
 }
 
 export interface Outcome {

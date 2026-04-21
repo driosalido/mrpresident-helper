@@ -19,12 +19,14 @@ export const stepsF: Step[] = [
         kind: 'int',
         label: '+1 AP counters on China',
         min: 0,
+        max: 5,
       },
       {
         id: 'minusAPCounters',
         kind: 'int',
         label: '−1 AP counters on China',
         min: 0,
+        max: 5,
       },
     ],
     resolution: {

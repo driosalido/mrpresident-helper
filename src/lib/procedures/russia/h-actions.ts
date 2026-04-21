@@ -612,6 +612,7 @@ export const stepsH: Step[] = [
         kind: 'int',
         label: 'Russia Influence in Middle East',
         min: 0,
+        max: 10,
       },
       {
         id: 'warInME',
@@ -687,6 +688,8 @@ export const stepsH: Step[] = [
         id: 'eeInfluenceDiff',
         kind: 'int',
         label: 'Russia Influence in EE minus US Military Assets in EE (DRM; positive = Russia advantage)',
+        min: -10,
+        max: 10,
         help: 'Negative if US has more assets. Used as DRM on the probe roll.',
       },
     ],

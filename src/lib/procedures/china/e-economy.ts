@@ -29,24 +29,28 @@ export const stepsE: Step[] = [
         kind: 'int',
         label: 'China Influence in Asia/Pacific (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceCSA',
         kind: 'int',
         label: 'China Influence in Central/South Asia (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceME',
         kind: 'int',
         label: 'China Influence in Middle East (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceAfrica',
         kind: 'int',
         label: 'China Influence in Africa (−1 DRM each)',
         min: 0,
+        max: 10,
       },
     ],
     dice: [

@@ -31,6 +31,19 @@ function MutationItem({ m }: { m: Mutation }) {
 }
 
 function StateChangePill({ sc, faction }: { sc: StateChange; faction: Faction }) {
+  // Removal variant: red strikethrough, no arrow
+  if (sc.removed) {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-24 shrink-0">{sc.label}</span>
+        <span className="px-2 py-0.5 rounded font-mono text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 border border-red-300 dark:border-red-700 line-through">
+          {sc.from}
+        </span>
+        <span className="text-red-500 dark:text-red-400 text-xs font-semibold">REMOVED</span>
+      </div>
+    );
+  }
+
   const changed = sc.from !== sc.to;
   const accentBg = faction === 'russia'
     ? 'bg-red-600 dark:bg-red-700 text-white'

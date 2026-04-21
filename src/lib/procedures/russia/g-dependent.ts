@@ -20,6 +20,7 @@ export const stepsG: Step[] = [
         kind: 'int',
         label: 'Total Terror Group levels in Central/South Asia',
         min: 0,
+        max: 20,
         help: 'Sum the levels of all terror groups in the region.',
       },
     ],
@@ -75,8 +76,8 @@ export const stepsG: Step[] = [
         if (roll.modified <= 4) {
           return {
             id: 'russia.G2.cost',
-            summary: 'Internal dissent flares — Russia spends 1 Action with no game effect.',
-            mutations: [{ kind: 'consumeAction' }],
+            summary: 'Internal dissent flares — no game effect. (No Action cost.)',
+            consumesAction: false,
           };
         }
         return {

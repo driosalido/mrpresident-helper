@@ -16,17 +16,33 @@ export const US_RELATION_LABELS: Record<USRelationLevel, string> = {
 
 export const DEFAULT_US_RELATION: USRelation = { level: 3, pendingAntiUS: 0, pendingProUS: 0 };
 
+export interface TrendMarkerResult {
+  rel: USRelation;
+  cancelledAnti: number;  // pending Anti-US tokens removed by incoming Pro-US
+  cancelledPro: number;   // pending Pro-US tokens removed by incoming Anti-US
+}
+
 /**
  * Apply accumulated trend markers to a USRelation.
- * Every 2 anti-US markers reduce the level by 1; every 2 pro-US markers raise it.
+ * Opposite markers cancel 1-for-1 first, then every 2 same-kind markers move the level.
  */
 export function applyTrendMarkers(
   rel: USRelation,
   addAntiUS: number,
   addProUS: number,
-): USRelation {
+): TrendMarkerResult {
   let antiUS = rel.pendingAntiUS + addAntiUS;
-  let proUS = rel.pendingProUS + addProUS;
+  let proUS  = rel.pendingProUS + addProUS;
+
+  // Cancel opposites 1-for-1 before pairing.
+  const cancel = Math.min(antiUS, proUS);
+  antiUS -= cancel;
+  proUS  -= cancel;
+
+  // Attribute cancellation to whichever side was ADDED this call.
+  const cancelledAnti = Math.min(cancel, addProUS);
+  const cancelledPro  = Math.min(cancel, addAntiUS);
+
   let level = rel.level as number;
 
   const antiPairs = Math.floor(antiUS / 2);
@@ -37,5 +53,9 @@ export function applyTrendMarkers(
   proUS = proUS % 2;
   level = Math.min(5, level + proPairs);
 
-  return { level: level as USRelationLevel, pendingAntiUS: antiUS, pendingProUS: proUS };
+  return {
+    rel: { level: level as USRelationLevel, pendingAntiUS: antiUS, pendingProUS: proUS },
+    cancelledAnti,
+    cancelledPro,
+  };
 }

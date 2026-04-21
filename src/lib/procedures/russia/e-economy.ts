@@ -29,18 +29,21 @@ export const stepsE: Step[] = [
         kind: 'int',
         label: 'Russia Influence in Eurozone (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceInEE',
         kind: 'int',
         label: 'Russia Influence in Eastern Europe (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceInCSAsia',
         kind: 'int',
         label: 'Russia Influence in Central/South Asia (−1 DRM each)',
         min: 0,
+        max: 10,
       },
     ],
     dice: [
