@@ -1,5 +1,5 @@
 import type { Step } from '@/lib/procedures/types';
-import { deriveCyberAdvD, cyberDrmD } from '@/lib/procedures/capabilities';
+import { deriveCyberAdvD, cyberDrmD, capFromSelectionRoll, CAPABILITY_LABELS } from '@/lib/procedures/capabilities';
 import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 // Section D — Espionage
@@ -37,7 +37,7 @@ export const stepsD: Step[] = [
     ],
     repeat: {
       count: (ctx) =>
-        Number(ctx.sharedState['relationsBox'] ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
+        Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
       label: 'Espionage Attempt',
     },
     dice: [
@@ -77,6 +77,7 @@ export const stepsD: Step[] = [
         ],
         cap: { min: -3, max: 3 },
       },
+      { id: 'capRoll', kind: 'd10', label: 'Capability selection (auto)' },
     ],
     resolution: {
       kind: 'custom',
@@ -84,20 +85,30 @@ export const stepsD: Step[] = [
         const roll = ctx.dice['espRoll'];
         const m = roll.modified;
 
-        if (m <= 0) {
-          return {
-            id: 'russia.D.major',
-            summary: 'Thwart US Counter-Intel & Steal Tech.',
-            detail: 'If "+2 DRM Remainder of Game" counter exists, remove it. Roll d10 to pick a random Strategic Capability — advance Russia\'s rating in that area by 1 box.',
-            mutations: [{ kind: 'note', note: 'Roll d10 for random capability → +1 box for Russia.' }],
-          };
-        }
-        if (m <= 3) {
+        if (m <= 0 || m <= 3) {
+          const capRollVal = ctx.dice['capRoll'].modified;
+          const pickedCap = capFromSelectionRoll(capRollVal);
+          const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+          const beforeVal = tracks?.faction[pickedCap] ?? 1;
+          const afterVal = Math.min(7, beforeVal + 1);
+          const newTracks = tracks
+            ? { faction: { ...tracks.faction, [pickedCap]: afterVal }, us: tracks.us }
+            : undefined;
+
+          if (m <= 0) {
+            return {
+              id: 'russia.D.major',
+              summary: `Thwart US Counter-Intel & Steal Tech — rolled ${capRollVal} → ${CAPABILITY_LABELS[pickedCap]} advanced.`,
+              detail: 'If "+2 DRM Remainder of Game" counter exists, remove it.',
+              stateChanges: [{ label: CAPABILITY_LABELS[pickedCap], from: String(beforeVal), to: String(afterVal) }],
+              mutations: newTracks ? [{ kind: 'set' as const, target: 'capabilityTracks', value: newTracks }] : [],
+            };
+          }
           return {
             id: 'russia.D.steal',
-            summary: 'Steal Technology.',
-            detail: 'Roll d10 to pick a random Strategic Capability — advance Russia\'s rating in that area by 1 box.',
-            mutations: [{ kind: 'note', note: 'Roll d10 for random capability → +1 box for Russia.' }],
+            summary: `Steal Technology — rolled ${capRollVal} → ${CAPABILITY_LABELS[pickedCap]} advanced.`,
+            stateChanges: [{ label: CAPABILITY_LABELS[pickedCap], from: String(beforeVal), to: String(afterVal) }],
+            mutations: newTracks ? [{ kind: 'set' as const, target: 'capabilityTracks', value: newTracks }] : [],
           };
         }
         if (m <= 7) {

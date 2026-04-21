@@ -189,7 +189,7 @@ export const stepsH: Step[] = [
 
         const roll = ctx.dice['h2Roll'];
         const regionName = { ee: 'Eastern Europe', eurozone: 'Eurozone', csa: 'Central/South Asia' }[region];
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
 
         if (roll.modified <= 10) {
           const outcomes: Outcome[] = [
@@ -306,7 +306,7 @@ export const stepsH: Step[] = [
         if (!sanctions) {
           return { id: 'russia.H3.nosanctions', summary: 'No Sanctions on Russia — H3 has no effect.', consumesAction: false };
         }
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
         if (relations >= 4) {
           return {
             id: 'russia.H3.free',
@@ -612,6 +612,7 @@ export const stepsH: Step[] = [
         kind: 'int',
         label: 'Russia Influence in Middle East',
         min: 0,
+        max: 10,
       },
       {
         id: 'warInME',
@@ -687,6 +688,8 @@ export const stepsH: Step[] = [
         id: 'eeInfluenceDiff',
         kind: 'int',
         label: 'Russia Influence in EE minus US Military Assets in EE (DRM; positive = Russia advantage)',
+        min: -10,
+        max: 10,
         help: 'Negative if US has more assets. Used as DRM on the probe roll.',
       },
     ],
@@ -699,7 +702,7 @@ export const stepsH: Step[] = [
           {
             label: 'Relations box modifier',
             value: (ctx) => {
-              const r = Number(ctx.sharedState['relationsBox'] ?? 3);
+              const r = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
               return [0, -2, -1, 0, 1, 2][r] ?? 0;
             },
           },
@@ -717,7 +720,7 @@ export const stepsH: Step[] = [
         if (String(ctx.inputs.triggered) === 'no') {
           return { id: 'russia.H10.skip', summary: 'H10 skipped.', consumesAction: false };
         }
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
         if (relations >= 4) {
           return { id: 'russia.H10.peacetime', summary: 'Relations 4–5 — H10 does not trigger.', consumesAction: false };
         }

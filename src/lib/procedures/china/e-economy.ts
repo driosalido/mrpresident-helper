@@ -1,4 +1,4 @@
-import type { Step } from '@/lib/procedures/types';
+import type { Step, SoESnapshot } from '@/lib/procedures/types';
 import type { USRelation } from '@/lib/procedures/usRelation';
 
 // Section E — Improve Economy (China)
@@ -29,24 +29,28 @@ export const stepsE: Step[] = [
         kind: 'int',
         label: 'China Influence in Asia/Pacific (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceCSA',
         kind: 'int',
         label: 'China Influence in Central/South Asia (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceME',
         kind: 'int',
         label: 'China Influence in Middle East (−1 DRM each)',
         min: 0,
+        max: 10,
       },
       {
         id: 'influenceAfrica',
         kind: 'int',
         label: 'China Influence in Africa (−1 DRM each)',
         min: 0,
+        max: 10,
       },
     ],
     dice: [
@@ -83,6 +87,7 @@ export const stepsE: Step[] = [
 
         const soeTrend = String(ctx.sharedState['soeTrend'] ?? 'none');
         const m = ctx.dice['ecoRoll'].modified;
+        const beforeSnap: SoESnapshot = { value: soe, trend: soeTrend as SoESnapshot['trend'] };
 
         if (m <= 5) {
           if (soeTrend === 'improving') {
@@ -90,7 +95,11 @@ export const stepsE: Step[] = [
             return {
               id: 'china.E.improving',
               summary: 'Improving marker already present — SoE moves up. Remove marker.',
-              stateChanges: [{ label: 'SoE', from: String(soe), to: String(newSoe) }],
+              stateChanges: [
+                { label: 'SoE Trend', from: 'improving', to: 'none', removed: true },
+                { label: 'SoE', from: String(soe), to: String(newSoe) },
+              ],
+              soeSnapshot: { before: beforeSnap, after: { value: newSoe, trend: 'none' } },
               mutations: [
                 { kind: 'set', target: 'soe', amount: newSoe },
                 { kind: 'set', target: 'soeTrend', value: 'none' },
@@ -101,12 +110,16 @@ export const stepsE: Step[] = [
             return {
               id: 'china.E.cancel',
               summary: 'Improving result cancels existing Worsening marker. Remove Worsening marker.',
+              stateChanges: [{ label: 'SoE Trend', from: 'worsening', to: 'none', removed: true }],
+              soeSnapshot: { before: beforeSnap, after: { value: soe, trend: 'none' } },
               mutations: [{ kind: 'set', target: 'soeTrend', value: 'none' }],
             };
           }
           return {
             id: 'china.E.improving',
             summary: 'Place "Improving Economy" marker on China SoE Track.',
+            stateChanges: [{ label: 'SoE Trend', from: 'none', to: 'improving' }],
+            soeSnapshot: { before: beforeSnap, after: { value: soe, trend: 'improving' } },
             mutations: [{ kind: 'set', target: 'soeTrend', value: 'improving' }],
           };
         }
@@ -120,7 +133,11 @@ export const stepsE: Step[] = [
           return {
             id: 'china.E.worsening',
             summary: 'Worsening marker already present — SoE moves down. Remove marker. Subtract 1 from China Actions in Section F.',
-            stateChanges: [{ label: 'SoE', from: String(soe), to: String(newSoe) }],
+            stateChanges: [
+              { label: 'SoE Trend', from: 'worsening', to: 'none', removed: true },
+              { label: 'SoE', from: String(soe), to: String(newSoe) },
+            ],
+            soeSnapshot: { before: beforeSnap, after: { value: newSoe, trend: 'none' } },
             mutations: [
               { kind: 'set', target: 'soe', amount: newSoe },
               { kind: 'set', target: 'soeTrend', value: 'none' },
@@ -132,12 +149,16 @@ export const stepsE: Step[] = [
           return {
             id: 'china.E.cancel',
             summary: 'Worsening result cancels existing Improving marker. Remove Improving marker.',
+            stateChanges: [{ label: 'SoE Trend', from: 'improving', to: 'none', removed: true }],
+            soeSnapshot: { before: beforeSnap, after: { value: soe, trend: 'none' } },
             mutations: [{ kind: 'set', target: 'soeTrend', value: 'none' }],
           };
         }
         return {
           id: 'china.E.worsening',
           summary: 'Place "Worsening Economy" marker on China SoE Track. Subtract 1 from China Actions in Section F.',
+          stateChanges: [{ label: 'SoE Trend', from: 'none', to: 'worsening' }],
+          soeSnapshot: { before: beforeSnap, after: { value: soe, trend: 'worsening' } },
           mutations: [
             { kind: 'set', target: 'soeTrend', value: 'worsening' },
             { kind: 'set', target: 'worseningEconomy', amount: 1 },

@@ -52,7 +52,7 @@ export const stepsH: Step[] = [
           return { id: 'china.H1.skip', summary: 'H1 skipped.', consumesAction: false };
         }
 
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
         let target = ctx.dice['cyberTarget'].modified;
 
         // Relations 4–5 target redirection
@@ -237,7 +237,7 @@ export const stepsH: Step[] = [
         const names: Record<string, string> = { ap: 'Asia/Pacific', csa: 'Central/South Asia', me: 'Middle East', africa: 'Africa', eurozone: 'Eurozone' };
         const regionName = names[region];
         const roll = ctx.dice['h3Roll'];
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
 
         if (roll.modified <= 10) {
           const outcomes: Outcome[] = [
@@ -403,6 +403,7 @@ export const stepsH: Step[] = [
         kind: 'int',
         label: 'China Influence in Asia/Pacific',
         min: 0,
+        max: 10,
         help: 'Skip H5 if < 2.',
       },
     ],
@@ -715,6 +716,7 @@ Fail (modified > HS value): −1 US SoE; −5 Public Approval; −1 RWC; −1 Ho
         kind: 'int',
         label: 'China Influence in the target region (DRM on probe roll)',
         min: 0,
+        max: 10,
         help: 'C/S Asia influence for India; A/P influence for Japan.',
       },
     ],

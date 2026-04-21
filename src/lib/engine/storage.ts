@@ -8,16 +8,16 @@ const ARCHIVE_LIMIT = 20;
 
 // ─── Zero tracks ─────────────────────────────────────────────────────────────
 
-function zeroTracks(): Record<CapabilityKey, number> {
-  return Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 0])) as Record<CapabilityKey, number>;
+function defaultTracks(): Record<CapabilityKey, number> {
+  return Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, 1])) as Record<CapabilityKey, number>;
 }
 
 function defaultSharedState(): GameSharedState {
   return {
     capabilityTracks: {
-      russia: zeroTracks(),
-      china: zeroTracks(),
-      us: zeroTracks(),
+      russia: defaultTracks(),
+      china: defaultTracks(),
+      us: defaultTracks(),
     },
     usRelation: {
       russia: { ...DEFAULT_US_RELATION },
@@ -140,7 +140,9 @@ export function clearActiveRun(game: Game, faction: Faction): Game {
 
 export function getTracksForFaction(game: Game, faction: Faction): CapabilityTracks {
   const ct = game.sharedState.capabilityTracks;
-  return { faction: ct[faction], us: ct.us };
+  const clamp = (raw: Record<CapabilityKey, number>) =>
+    Object.fromEntries(CAPABILITY_KEYS.map((k) => [k, Math.max(1, raw[k] ?? 1)])) as Record<CapabilityKey, number>;
+  return { faction: clamp(ct[faction]), us: clamp(ct.us) };
 }
 
 export function applySharedStateToGame(game: Game, session: Session): Game {

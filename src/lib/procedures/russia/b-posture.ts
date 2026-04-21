@@ -1,4 +1,4 @@
-import type { Step, Outcome } from '@/lib/procedures/types';
+import type { Step, Outcome, StateChange, RelationsSnapshot } from '@/lib/procedures/types';
 import {
   US_RELATION_LABELS,
   DEFAULT_US_RELATION,
@@ -24,6 +24,7 @@ export const stepsB: Step[] = [
         kind: 'int',
         label: 'Sum of all revealed Russia Tensions counters',
         min: 0,
+        max: 30,
         help: 'Flip all Tensions counters face-up and add their printed values.',
       },
       {
@@ -31,6 +32,7 @@ export const stepsB: Step[] = [
         kind: 'int',
         label: 'Total number of Tensions counters on Russia (before removal)',
         min: 0,
+        max: 12,
         help: 'Used to calculate how many to redraw (half, rounded up).',
       },
     ],
@@ -81,24 +83,28 @@ export const stepsB: Step[] = [
           ],
         });
 
-        // Relations trending — accumulator model
-        let newRelation: USRelation;
+        // Relations trending — accumulator model with opposite-cancellation
+        let relationsResult: ReturnType<typeof applyTrendMarkers>;
         let relationsNote: string;
 
         if (sum <= 1) {
-          newRelation = applyTrendMarkers(currentRelation, 0, 1);
+          relationsResult = applyTrendMarkers(currentRelation, 0, 1);
           relationsNote = `Sum ≤ 1 → +1 Pro-US marker.`;
         } else {
           const antiUSCount = Math.floor(sum / 5);
           if (antiUSCount > 0) {
-            newRelation = applyTrendMarkers(currentRelation, antiUSCount, 0);
+            relationsResult = applyTrendMarkers(currentRelation, antiUSCount, 0);
             relationsNote = `Sum = ${sum} → +${antiUSCount} Anti-US marker(s).`;
           } else {
-            newRelation = currentRelation;
+            relationsResult = applyTrendMarkers(currentRelation, 0, 0);
             relationsNote = `Sum ${sum} (< 5) — no Relations shift.`;
           }
         }
 
+        const { rel: newRelation, cancelledAnti, cancelledPro } = relationsResult;
+
+        if (cancelledAnti > 0) relationsNote += ` Removed ${cancelledAnti} Anti-US trending marker(s) — cancelled by Pro-US.`;
+        if (cancelledPro > 0)  relationsNote += ` Removed ${cancelledPro} Pro-US trending marker(s) — cancelled by Anti-US.`;
         if (newRelation.level !== currentRelation.level) {
           relationsNote += ` Level: ${US_RELATION_LABELS[currentRelation.level]} → ${US_RELATION_LABELS[newRelation.level]}.`;
         }
@@ -109,12 +115,27 @@ export const stepsB: Step[] = [
           relationsNote += ` (${pending})`;
         }
 
+        const relationsStateChanges: StateChange[] = [];
+        if (cancelledAnti > 0) relationsStateChanges.push({ label: 'Anti-US trending', from: String(cancelledAnti), to: '0', removed: true });
+        if (cancelledPro > 0)  relationsStateChanges.push({ label: 'Pro-US trending',  from: String(cancelledPro),  to: '0', removed: true });
+        if (newRelation.pendingAntiUS !== currentRelation.pendingAntiUS) {
+          relationsStateChanges.push({ label: 'Anti-US pending', from: String(currentRelation.pendingAntiUS), to: String(newRelation.pendingAntiUS) });
+        }
+        if (newRelation.pendingProUS !== currentRelation.pendingProUS) {
+          relationsStateChanges.push({ label: 'Pro-US pending', from: String(currentRelation.pendingProUS), to: String(newRelation.pendingProUS) });
+        }
+        if (newRelation.level !== currentRelation.level) {
+          relationsStateChanges.push({ label: 'US Relations', from: US_RELATION_LABELS[currentRelation.level], to: US_RELATION_LABELS[newRelation.level] });
+        }
+
+        const relBefore: RelationsSnapshot = { level: currentRelation.level, pendingAntiUS: currentRelation.pendingAntiUS, pendingProUS: currentRelation.pendingProUS };
+        const relAfter: RelationsSnapshot = { level: newRelation.level, pendingAntiUS: newRelation.pendingAntiUS, pendingProUS: newRelation.pendingProUS };
+
         outcomes.push({
           id: 'russia.B.relations',
           summary: relationsNote,
-          stateChanges: newRelation.level !== currentRelation.level ? [
-            { label: 'US Relations', from: US_RELATION_LABELS[currentRelation.level], to: US_RELATION_LABELS[newRelation.level] },
-          ] : undefined,
+          stateChanges: relationsStateChanges.length ? relationsStateChanges : undefined,
+          relationsSnapshot: { before: relBefore, after: relAfter },
           mutations: [
             { kind: 'set', target: 'usRelation', value: newRelation },
           ],

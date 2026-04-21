@@ -1,5 +1,5 @@
 import type { Step } from '@/lib/procedures/types';
-import { deriveCyberAdvD, cyberDrmD } from '@/lib/procedures/capabilities';
+import { deriveCyberAdvD, cyberDrmD, capFromSelectionRoll, CAPABILITY_LABELS } from '@/lib/procedures/capabilities';
 import type { CapabilityTracks } from '@/lib/procedures/capabilities';
 
 // Section D — Espionage (China)
@@ -36,7 +36,7 @@ export const stepsD: Step[] = [
     ],
     repeat: {
       count: (ctx) =>
-        Number(ctx.sharedState['relationsBox'] ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
+        Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3) <= 2 && String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1,
       label: 'Espionage Attempt',
     },
     dice: [
@@ -60,24 +60,36 @@ export const stepsD: Step[] = [
         ],
         cap: { min: -3, max: 3 },
       },
+      { id: 'capRoll', kind: 'd10', label: 'Capability selection (auto)' },
     ],
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
         const m = ctx.dice['espRoll'].modified;
-        if (m <= 0) {
-          return {
-            id: 'china.D.major',
-            summary: 'Thwart US Counter-Intel & Steal Tech.',
-            detail: 'Remove "+2 DRM Remainder" if present. Roll d10 for random Strategic Capability → +1 box for China.',
-            mutations: [{ kind: 'note', note: 'Roll d10 for random capability → +1 box for China.' }],
-          };
-        }
-        if (m <= 3) {
+        if (m <= 0 || m <= 3) {
+          const capRollVal = ctx.dice['capRoll'].modified;
+          const pickedCap = capFromSelectionRoll(capRollVal);
+          const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
+          const beforeVal = tracks?.faction[pickedCap] ?? 1;
+          const afterVal = Math.min(7, beforeVal + 1);
+          const newTracks = tracks
+            ? { faction: { ...tracks.faction, [pickedCap]: afterVal }, us: tracks.us }
+            : undefined;
+
+          if (m <= 0) {
+            return {
+              id: 'china.D.major',
+              summary: `Thwart US Counter-Intel & Steal Tech — rolled ${capRollVal} → ${CAPABILITY_LABELS[pickedCap]} advanced.`,
+              detail: 'Remove "+2 DRM Remainder" if present.',
+              stateChanges: [{ label: CAPABILITY_LABELS[pickedCap], from: String(beforeVal), to: String(afterVal) }],
+              mutations: newTracks ? [{ kind: 'set' as const, target: 'capabilityTracks', value: newTracks }] : [],
+            };
+          }
           return {
             id: 'china.D.steal',
-            summary: 'Steal Technology — roll d10 for random Strategic Capability → +1 box for China.',
-            mutations: [{ kind: 'note', note: 'Roll d10 for random capability → +1 box for China.' }],
+            summary: `Steal Technology — rolled ${capRollVal} → ${CAPABILITY_LABELS[pickedCap]} advanced.`,
+            stateChanges: [{ label: CAPABILITY_LABELS[pickedCap], from: String(beforeVal), to: String(afterVal) }],
+            mutations: newTracks ? [{ kind: 'set' as const, target: 'capabilityTracks', value: newTracks }] : [],
           };
         }
         if (m <= 7) {

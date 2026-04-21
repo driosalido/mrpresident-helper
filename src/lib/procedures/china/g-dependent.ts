@@ -20,6 +20,7 @@ export const stepsG: Step[] = [
         kind: 'int',
         label: 'Total Terror Group levels in Central/South Asia',
         min: 0,
+        max: 20,
       },
     ],
     resolution: {
@@ -72,7 +73,7 @@ export const stepsG: Step[] = [
           return {
             id: 'china.G2.cost',
             summary: 'Internal dissent flares — China spends 1 Action with no game effect.',
-            mutations: [{ kind: 'consumeAction' }],
+            mutations: [{ kind: 'consumeAction' as const }],
           };
         }
         return { id: 'china.G2.fine', summary: 'Dissent suppressed — no action cost.', consumesAction: false };
@@ -138,7 +139,7 @@ export const stepsG: Step[] = [
         if (!(ctx.inputs.sanctionsExist === true || ctx.inputs.sanctionsExist === 'true')) {
           return { id: 'china.G4.none', summary: 'No Sanctions on China — G4 skipped.', consumesAction: false };
         }
-        const relations = Number(ctx.sharedState['relationsBox'] ?? 3);
+        const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
         const regions = Number(ctx.inputs.regionsWithInfluence);
         const multilateral = ctx.inputs.hasMultilateral === true || ctx.inputs.hasMultilateral === 'true';
 

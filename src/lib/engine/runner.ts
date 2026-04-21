@@ -60,6 +60,9 @@ function applyMutations(session: Session, mutations: Mutation[]): void {
           session.cursorRepeatIdx = 0;
         }
         break;
+      case 'consumeAction':
+        session.actionBudget = Math.max(0, session.actionBudget - 1);
+        break;
       default:
         break;
     }

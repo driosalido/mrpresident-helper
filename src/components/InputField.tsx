@@ -39,17 +39,19 @@ export function InputField({ spec, value, allValues, onChange }: Props) {
   }
 
   if (spec.kind === 'int') {
+    const min = spec.min ?? 0;
+    const max = spec.max ?? 10;
+    const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
     return (
       <div className="mb-3">
         {baseLabel}
-        <input
-          type="number"
-          min={spec.min}
-          max={spec.max}
-          value={value as number}
-          onChange={(e) => onChange(spec.id, parseInt(e.target.value, 10) || 0)}
+        <select
+          value={Number(value)}
+          onChange={(e) => onChange(spec.id, Number(e.target.value))}
           className="w-24 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        >
+          {options.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
       </div>
     );
   }

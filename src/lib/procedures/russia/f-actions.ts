@@ -25,12 +25,14 @@ export const stepsF: Step[] = [
         kind: 'int',
         label: '+1 AP counters on Russia',
         min: 0,
+        max: 5,
       },
       {
         id: 'minusAPCounters',
         kind: 'int',
         label: '−1 AP counters on Russia',
         min: 0,
+        max: 5,
       },
     ],
     resolution: {
@@ -50,6 +52,7 @@ export const stepsF: Step[] = [
           id: 'russia.F.actions',
           summary: `Russia Actions this turn: ${total}`,
           detail: `SoE(${soe}) + Relations modifier(${relMod}) + AP(+${plus}/−${minus}) − worsening(${worsened}) = ${total}`,
+          stateChanges: [{ label: 'Action Budget', from: '—', to: String(total) }],
           mutations: [
             { kind: 'set', target: 'actionBudget', amount: total },
             { kind: 'set', target: 'totalActions', value: total },

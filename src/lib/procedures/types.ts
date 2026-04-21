@@ -66,6 +66,18 @@ export interface StateChange {
   label: string;
   from: string;
   to: string;
+  removed?: boolean;  // render in red with strikethrough instead of before→after
+}
+
+export interface SoESnapshot {
+  value: number; // 3–7
+  trend: 'none' | 'improving' | 'worsening';
+}
+
+export interface RelationsSnapshot {
+  level: number; // 1–5
+  pendingAntiUS: number;
+  pendingProUS: number;
 }
 
 export interface Outcome {
@@ -76,6 +88,8 @@ export interface Outcome {
   stateChanges?: StateChange[];
   consumesAction?: boolean; // default true inside section H
   boardSnapshot?: { before: CapabilityTracks; after: CapabilityTracks; faction: Faction };
+  soeSnapshot?: { before: SoESnapshot; after: SoESnapshot };
+  relationsSnapshot?: { before: RelationsSnapshot; after: RelationsSnapshot };
   hidden?: boolean; // suppress card display; mutations still apply
 }
 

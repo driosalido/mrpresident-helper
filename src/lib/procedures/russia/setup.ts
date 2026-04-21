@@ -78,8 +78,8 @@ export const stepsSetup: Step[] = [
           us:      {} as Record<CapabilityKey, number>,
         };
         for (const k of CAPABILITY_KEYS) {
-          tracks.faction[k] = Number(ctx.inputs[`faction_${k}`] ?? 1);
-          tracks.us[k]      = Number(ctx.inputs[`us_${k}`]      ?? 1);
+          tracks.faction[k] = Math.max(1, Number(ctx.inputs[`faction_${k}`] ?? 1));
+          tracks.us[k]      = Math.max(1, Number(ctx.inputs[`us_${k}`]      ?? 1));
         }
         const level = Number(ctx.inputs['usRelationLevel'] ?? 3) as USRelationLevel;
         const trendInput = String(ctx.inputs['usRelationTrend'] ?? 'none');
