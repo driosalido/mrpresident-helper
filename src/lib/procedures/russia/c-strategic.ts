@@ -64,11 +64,11 @@ export const stepsC: Step[] = [
           us:      { ...tracksRaw.us },
         };
 
-        const improved = new Set<CapabilityKey>();
+        const attempted = new Set<CapabilityKey>();
         const outcomes: Outcome[] = [];
 
         const eligible = (cap: CapabilityKey): boolean =>
-          !improved.has(cap) && tracks.faction[cap] < 7;
+          !attempted.has(cap) && tracks.faction[cap] < 7;
 
         for (let i = 0; i < attempts; i++) {
           const impRoll = ctx.dice[`imp${i}`].sum;   // raw 1–10
@@ -124,11 +124,11 @@ export const stepsC: Step[] = [
           }
 
           // Improvement roll (+sanctions DRM)
+          attempted.add(target);
           const label = CAPABILITY_LABELS[target];
           const modified = impRoll + sanctions;
           const sanctionsNote = sanctions > 0 ? ` +${sanctions} (sanctions)` : '';
           if (modified <= threshold) {
-            improved.add(target);
             const beforeVal = tracks.faction[target];
             tracks.faction[target] = Math.min(7, tracks.faction[target] + 1);
             const afterVal = tracks.faction[target];
