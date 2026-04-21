@@ -76,8 +76,8 @@ export const stepsG: Step[] = [
         if (roll.modified <= 4) {
           return {
             id: 'russia.G2.cost',
-            summary: 'Internal dissent flares — Russia spends 1 Action with no game effect.',
-            mutations: [{ kind: 'consumeAction' as const }],
+            summary: 'Internal dissent flares — no game effect. (No Action cost.)',
+            consumesAction: false,
           };
         }
         return {

@@ -72,8 +72,8 @@ export const stepsG: Step[] = [
         if (m <= 4) {
           return {
             id: 'china.G2.cost',
-            summary: 'Internal dissent flares — China spends 1 Action with no game effect.',
-            mutations: [{ kind: 'consumeAction' as const }],
+            summary: 'Internal dissent flares — no game effect. (No Action cost.)',
+            consumesAction: false,
           };
         }
         return { id: 'china.G2.fine', summary: 'Dissent suppressed — no action cost.', consumesAction: false };
