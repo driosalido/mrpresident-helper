@@ -102,13 +102,10 @@ export const stepsG: Step[] = [
         label: 'Is Russia currently at War?',
       },
     ],
-    dice: [
-      {
-        id: 'reinforce',
-        kind: 'd10',
-        label: 'Reinforcement roll',
-      },
-    ],
+    dice: (_ss, inputs) => {
+      const atWar = inputs?.russiaAtWar === true || inputs?.russiaAtWar === 'true';
+      return atWar ? [{ id: 'reinforce', kind: 'd10' as const, label: 'Reinforcement roll' }] : [];
+    },
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {

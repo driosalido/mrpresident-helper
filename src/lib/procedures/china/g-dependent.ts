@@ -90,7 +90,10 @@ export const stepsG: Step[] = [
     inputs: [
       { id: 'chinaAtWar', kind: 'bool', label: 'Is China currently at War?' },
     ],
-    dice: [{ id: 'reinforce', kind: 'd10', label: 'Reinforcement roll' }],
+    dice: (_ss, inputs) => {
+      const atWar = inputs?.chinaAtWar === true || inputs?.chinaAtWar === 'true';
+      return atWar ? [{ id: 'reinforce', kind: 'd10' as const, label: 'Reinforcement roll' }] : [];
+    },
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {

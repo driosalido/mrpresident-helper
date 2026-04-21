@@ -122,7 +122,7 @@ export interface Step {
   help?: string | ((sharedState: Record<string, unknown>) => string);
   guard?: (ctx: StepCtx) => boolean;
   inputs?: InputSpec[];
-  dice?: DiceSpec[] | ((sharedState: Record<string, unknown>) => DiceSpec[]);
+  dice?: DiceSpec[] | ((sharedState: Record<string, unknown>, inputs?: Inputs) => DiceSpec[]);
   repeat?: RepeatSpec;
   resolution: Resolution;
 }

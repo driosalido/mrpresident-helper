@@ -99,7 +99,7 @@ export function resolveStep(
   const ctx = buildCtx(session, inputs);
 
   // Roll dice
-  const diceSpecs = typeof step.dice === 'function' ? step.dice(session.sharedState) : (step.dice ?? []);
+  const diceSpecs = typeof step.dice === 'function' ? step.dice(session.sharedState, inputs) : (step.dice ?? []);
   const rolls = diceSpecs.map((spec) => {
     const result = executeRoll(spec, ctx);
     ctx.dice[result.id] = result;

@@ -205,7 +205,7 @@ export function StepCard({ step, faction, repeatIndex, repeatTotal, actionBudget
     ? ` — ${step.repeat?.label ?? 'Attempt'} ${repeatIndex + 1} of ${repeatTotal}`
     : '';
 
-  const resolvedDice = typeof step.dice === 'function' ? step.dice(sharedState) : (step.dice ?? []);
+  const resolvedDice = typeof step.dice === 'function' ? step.dice(sharedState, inputs) : (step.dice ?? []);
   const hasDice = resolvedDice.length > 0;
   const hasInputs = (step.inputs ?? []).length > 0;
 
