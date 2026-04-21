@@ -34,9 +34,7 @@ export const stepsH: Step[] = [
     section: 'H',
     title: 'H1 — Cyber Attacks',
     help: '1 attack (Posture 1) or 2 attacks (Posture 2). If Relations 4–5, target rolls of 1 or 2 are redirected to different rows.',
-    inputs: [
-      ...triggered('Does H1 trigger? (Always yes — H1 is always attempted first)'),
-    ],
+    inputs: [],
     repeat: {
       count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 2 : 1),
       label: 'Cyber Attack',
@@ -48,10 +46,6 @@ export const stepsH: Step[] = [
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        if (String(ctx.inputs.triggered) === 'no') {
-          return { id: 'china.H1.skip', summary: 'H1 skipped.', consumesAction: false };
-        }
-
         const relations = Number((ctx.sharedState['usRelation'] as { level?: number } | undefined)?.level ?? 3);
         let target = ctx.dice['cyberTarget'].modified;
 

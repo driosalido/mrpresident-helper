@@ -52,9 +52,7 @@ export const stepsH: Step[] = [
     section: 'H',
     title: 'H1 — Cyber Attacks & Online Disinformation',
     help: 'Makes 2 attacks (Posture 1) or 3 attacks (Posture 2). Each attack: roll d10 for target, then d10 for success (vs Cyber Capability comparison).',
-    inputs: [
-      ...triggered('Does H1 trigger? (Always yes — H1 is always attempted first)'),
-    ],
+    inputs: [],
     repeat: {
       count: (ctx) => (String(ctx.sharedState['posture'] ?? '1') === '2' ? 3 : 2),
       label: 'Cyber Attack',
@@ -66,10 +64,6 @@ export const stepsH: Step[] = [
     resolution: {
       kind: 'custom',
       resolve: (ctx) => {
-        if (String(ctx.inputs.triggered) === 'no') {
-          return { id: 'russia.H1.skip', summary: 'H1 skipped.', consumesAction: false };
-        }
-
         const target = ctx.dice['cyberTarget'].modified;
         const success = ctx.dice['cyberSuccess'].modified;
         const tracks = ctx.sharedState['capabilityTracks'] as CapabilityTracks | undefined;
